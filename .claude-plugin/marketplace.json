@@ -1,0 +1,14 @@
+{
+  "name": "biu-research-authority",
+  "description": "Private research administration plugins for Bar-Ilan University",
+  "owner": {
+    "name": "BIU Research Authority"
+  },
+  "plugins": [
+    {
+      "name": "financial-report",
+      "source": "./plugins/financial-report",
+      "description": "Financial report workflows for research funds"
+    }
+  ]
+}

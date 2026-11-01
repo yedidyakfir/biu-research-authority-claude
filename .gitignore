@@ -1,0 +1,11 @@
+# Financial records and local analysis outputs
+/analysis/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# Local tooling
+.claude/settings.local.json
+__pycache__/
+.venv/

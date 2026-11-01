@@ -1,0 +1,11 @@
+{
+  "name": "financial-report",
+  "displayName": "Financial Report",
+  "version": "0.0.1",
+  "description": "Research fund financial report workflows; skills are in preparation",
+  "author": {
+    "name": "BIU Research Authority"
+  },
+  "repository": "https://github.com/yedidyakfir/biu-research-authority-claude",
+  "keywords": ["research", "finance", "reports"]
+}
