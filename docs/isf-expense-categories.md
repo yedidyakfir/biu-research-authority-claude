@@ -4,6 +4,8 @@ Source: [Israel Science Foundation personal research grant guidelines (Hebrew, N
 
 This is a **candidate classification map**, not an eligibility decision. The guide says financial reports follow the approved grant budget lines. Confirm the specific grant track, award year, approved budget, and any written ISF exceptions before using these categories for an official report.
 
+No single public cross-program ISF expense taxonomy was verified. Other official program guides differ: [quantum research](https://www.isf.org.il/Files/GuidelinesQuantum_Heb_3056_1.pdf) has different travel and equipment limits, [MAVRI biomedical research](https://www.isf.org.il/Files/GuidelinesMAVRIBio_Heb_3053_1.pdf) separates research tools from materials, and [publication grants](https://www.isf.org.il/Files/GuidelinesPublications_Heb_3084_1.pdf) use a different expense structure. Do not apply the personal-grant limits across all programs.
+
 | Budget heading | Hebrew | Examples in the guide |
 | --- | --- | --- |
 | Personnel | כוח אדם | Research staff and students |
