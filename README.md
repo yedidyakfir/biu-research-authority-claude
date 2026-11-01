@@ -17,4 +17,6 @@ claude plugin install financial-report@biu-research-authority
 
 The repository contains plugin definitions. Financial source workbooks and classified outputs stay in the ignored local `analysis/` directory.
 
+The [ISF category research](docs/isf-expense-categories.md) records the initial official-source headings and the checks needed before implementing the skill.
+
 Marketplace layout follows the [Claude Code marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces).
