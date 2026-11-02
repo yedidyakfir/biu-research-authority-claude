@@ -16,6 +16,15 @@
   const $ = id => document.getElementById(id);
   const cellValue = cell => cell == null ? "" : typeof cell === "object" ? (cell.display ?? cell.v ?? "") : cell;
   const text = value => String(value ?? "");
+  // Keep workbook values intact; isolate Latin words and dates only in displayed text.
+  const displayText = value => text(value)
+    .replace(/([A-Za-z])([\u0590-\u05ff])|([\u0590-\u05ff])([A-Za-z])/g, (_, latin, hebrew, hebrewBefore, latinAfter) =>
+      latin ? `${latin}\u2009${hebrew}` : `${hebrewBefore}\u2009${latinAfter}`)
+    .replace(/(\.[A-Za-z][A-Za-z0-9]*|[A-Za-z][A-Za-z0-9._/@+-]*|[0-9]+(?:[./:-][0-9]+)+)/g, "\u2066$1\u2069");
+  const setDisplay = (element, value) => {
+    element.dir = "auto";
+    element.textContent = displayText(value);
+  };
   const rowCells = record => selectedSheet.rows[record.row - 1] || [];
   const at = (record, index) => index == null ? "" : cellValue(rowCells(record)[index]);
   const pending = record => {
@@ -105,9 +114,9 @@
       if (cell == null || cellValue(cell) === "") return;
       const group = document.createElement("div");
       const term = document.createElement("dt");
-      term.textContent = text(cellValue(header[index]) || `עמודה ${index + 1}`);
+      setDisplay(term, cellValue(header[index]) || `עמודה ${index + 1}`);
       const value = document.createElement("dd");
-      value.textContent = text(cellValue(cell));
+      setDisplay(value, cellValue(cell));
       group.append(term, value);
       list.append(group);
     });
@@ -119,10 +128,12 @@
     const card = document.createElement("article");
     card.innerHTML = '<div class="record-top"><div><div class="record-meta"><span class="row-id"></span><span class="record-badge"></span><span class="record-account"></span><span class="record-category"></span></div><h3 class="record-title"></h3></div><div class="record-amount"></div></div><p class="record-reason"></p><div class="record-actions-top"><button type="button" class="edit-toggle">עריכה</button></div><div class="edit-panel"><div class="edit-grid"><label class="field">סיווג<select class="category-select"></select></label><label class="field">נימוק קצר<input class="rationale" type="text" placeholder="למה נבחר הסיווג"></label></div><div class="decision-actions"><button type="button" class="button button-primary confirm-classification">אישור סיווג</button><button type="button" class="button button-outline mark-non-expense">לא הוצאה</button><button type="button" class="button button-danger-quiet mark-pending">השאר לבדיקה</button><span class="action-feedback" role="alert"></span></div><details class="uncertainty-edit"><summary>עריכת סיבת הבדיקה</summary><label class="field">מה חסר כדי להחליט?<textarea class="uncertainty" rows="2"></textarea></label></details></div>';
     card.querySelector(".row-id").textContent = `שורה ${record.row}`;
-    card.querySelector(".record-account").textContent = text(at(record, display.account));
-    const description = text(at(record, display.description)).trim();
-    card.querySelector(".record-title").textContent = description ? description.slice(0, 200) : text(at(record, display.reference)).slice(0, 200) || `תנועה בשורה ${record.row}`;
+    setDisplay(card.querySelector(".record-account"), at(record, display.account));
+    const description = text(at(record, display.description)).trim().replace(/^[,،\s]+|[,،\s]+$/g, "");
+    const reference = text(at(record, display.reference)).trim().replace(/^[,،\s]+|[,،\s]+$/g, "");
+    setDisplay(card.querySelector(".record-title"), description ? description.slice(0, 200) : reference.slice(0, 200) || `תנועה בשורה ${record.row}`);
     card.querySelector(".record-amount").textContent = amountFor(record);
+    card.querySelector(".record-amount").dir = "ltr";
     const warning = card.querySelector(".record-reason");
     const editToggle = card.querySelector(".edit-toggle");
     const editPanel = card.querySelector(".edit-panel");
@@ -132,8 +143,8 @@
       card.className = `record-card ${needsReview ? "pending" : record.classification.status === "not_expense" ? "not-expense" : ""}`;
       card.querySelector(".record-badge").textContent = needsReview ? "דורש בדיקה" : statusText[record.classification.status];
       const category = categories.get(record.classification.category_id);
-      card.querySelector(".record-category").textContent = !needsReview && category ? category.label_he : "";
-      warning.textContent = warningFor(record);
+      setDisplay(card.querySelector(".record-category"), !needsReview && category ? category.label_he : "");
+      setDisplay(warning, warningFor(record));
       warning.hidden = !needsReview;
       editToggle.hidden = needsReview;
       if (needsReview) editPanel.hidden = false;
@@ -149,9 +160,11 @@
       saveDraft(); updateOverview(); refreshCard();
     });
     const rationale = card.querySelector(".rationale");
+    rationale.dir = "auto";
     rationale.value = text(record.classification.rationale);
     rationale.addEventListener("input", () => { record.classification.rationale = rationale.value; feedback.textContent = ""; saveDraft(); updateOverview(); refreshCard(); });
     const uncertainty = card.querySelector(".uncertainty");
+    uncertainty.dir = "auto";
     uncertainty.value = text(record.classification.uncertainty_reason);
     uncertainty.addEventListener("input", () => {
       record.classification.uncertainty_reason = uncertainty.value;
@@ -229,7 +242,7 @@
 
   function saveJson() {
     download(`fund-report-review-${report.report_id}.json`, new Blob([JSON.stringify(report, null, 2)], { type: "application/json;charset=utf-8" }));
-    $("exportStatus").textContent = "קובץ JSON נשמר עם ההחלטות הנוכחיות.";
+    $("exportStatus").textContent = "קובץ \u2066JSON\u2069 נשמר עם ההחלטות הנוכחיות.";
   }
 
   function invalidRows() {
@@ -257,7 +270,7 @@
       const bytes = window.FundXlsx.buildXlsx(report);
       download(`fund-report-reviewed-${report.report_id}.xlsx`, new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const count = countByStatus();
-      $("exportStatus").textContent = count.pending ? `קובץ Excel נשמר עם ${count.pending} תנועות שעדיין מסומנות לבדיקה.` : "קובץ Excel נשמר.";
+      $("exportStatus").textContent = count.pending ? `קובץ \u2066Excel\u2069 נשמר עם ${count.pending} תנועות שעדיין מסומנות לבדיקה.` : "קובץ \u2066Excel\u2069 נשמר.";
     } catch (error) {
       $("exportStatus").textContent = `הייצוא נכשל: ${error.message}`;
     }
@@ -278,9 +291,9 @@
         record.classification = { ...record.classification, ...next };
       }
       saveDraft(); updateOverview(); renderList();
-      $("exportStatus").textContent = "החלטות הבדיקה נטענו מקובץ JSON.";
+      $("exportStatus").textContent = "החלטות הבדיקה נטענו מקובץ \u2066JSON\u2069.";
     } catch (error) {
-      $("exportStatus").textContent = `לא ניתן לטעון את JSON: ${error.message}`;
+      $("exportStatus").textContent = `לא ניתן לטעון את \u2066JSON\u2069: ${error.message}`;
     }
   }
 
@@ -294,9 +307,9 @@
   }
 
   loadDraft();
-  $("fileName").textContent = report.source.filename;
-  $("foundationName").textContent = `${report.foundation.name_he} · ${report.foundation.program_he}`;
-  $("policyScope").textContent = `${report.foundation.scope_note_he || report.foundation.scope_note} זכאות להוצאה לא נקבעה כאן.`;
+  setDisplay($("fileName"), report.source.filename);
+  setDisplay($("foundationName"), `${report.foundation.name_he} · ${report.foundation.program_he}`);
+  setDisplay($("policyScope"), `${report.foundation.scope_note_he || report.foundation.scope_note} זכאות להוצאה לא נקבעה כאן.`);
   const sourceUrl = report.foundation.source?.url || "";
   $("sourceLink").href = /^https:\/\//i.test(sourceUrl) ? sourceUrl : "#overview";
   updateOverview(); renderList(); updateReadingProgress();
@@ -306,6 +319,7 @@
     renderList();
   }));
   $("search").addEventListener("input", event => { search = event.target.value.trim().toLocaleLowerCase(); limit = 12; renderList(); });
+  $("search").dir = "auto";
   $("showMore").addEventListener("click", () => { limit += 12; renderList(); });
   $("saveJson").addEventListener("click", saveJson);
   $("exportXlsx").addEventListener("click", exportExcel);

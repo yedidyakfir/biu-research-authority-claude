@@ -37,7 +37,7 @@
           <div class="completion-track" aria-hidden="true"><span id="completionBar"></span></div>
         </div>
       </div>
-      <div class="report-line"><span id="fileName"></span><span class="line-dot" aria-hidden="true"></span><span id="foundationName"></span></div>
+      <div class="report-line"><bdi id="fileName" dir="auto"></bdi><span class="line-dot" aria-hidden="true"></span><bdi id="foundationName" dir="auto"></bdi></div>
       <div class="policy-line">
         <span class="policy-icon" aria-hidden="true">!</span>
         <span>סיווג מוצע בלבד. הזכאות לפי התקציב המאושר טרם אומתה.</span>
@@ -62,10 +62,10 @@
 
     <section id="export" class="section export-section">
       <div class="export-panel">
-        <div><h2>שמירה וייצוא</h2><p>הבדיקה נשמרת בדפדפן זה. כדי להעביר אותה למחשב אחר, שמרו גם JSON.</p></div>
-        <div class="export-actions"><button type="button" id="exportXlsx" class="button button-primary">ייצוא ל־Excel</button><button type="button" id="saveJson" class="button button-outline">שמירת JSON</button><button type="button" id="importJson" class="button button-quiet">טעינת JSON</button></div>
+        <div><h2>שמירה וייצוא</h2><p>הבדיקה נשמרת בדפדפן זה. כדי להעביר אותה למחשב אחר, שמרו גם <bdi dir="ltr">JSON</bdi>.</p></div>
+        <div class="export-actions"><button type="button" id="exportXlsx" class="button button-primary">ייצוא ל־<bdi dir="ltr">Excel</bdi></button><button type="button" id="saveJson" class="button button-outline">שמירת <bdi dir="ltr">JSON</bdi></button><button type="button" id="importJson" class="button button-quiet">טעינת <bdi dir="ltr">JSON</bdi></button></div>
         <p id="exportStatus" class="export-status" role="status"></p>
-        <details class="export-details"><summary>מה כולל קובץ Excel?</summary><p>כל ערכי המקור ועמודות הסיווג. עיצוב ותרשימים מהקובץ המקורי אינם מועתקים. עותק המקור נשמר בנפרד.</p></details>
+        <details class="export-details"><summary>מה כולל קובץ <bdi dir="ltr">Excel</bdi>?</summary><p>כל ערכי המקור ועמודות הסיווג. עיצוב ותרשימים מהקובץ המקורי אינם מועתקים. עותק המקור נשמר בנפרד.</p></details>
       </div>
     </section>
   </main>
