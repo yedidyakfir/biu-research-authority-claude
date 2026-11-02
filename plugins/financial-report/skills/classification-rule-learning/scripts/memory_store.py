@@ -3,6 +3,7 @@
 
 import argparse
 import calendar
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -330,7 +331,7 @@ def main():
     sub.add_parser("ingest-reviewed-report").add_argument("report", type=Path)
     args = parser.parse_args()
     try:
-        with connect(args.db) as db:
+        with closing(connect(args.db)) as db:
             if args.command == "init":
                 result = {"database": str(args.db.resolve())}
             elif args.command == "prune":

@@ -1,7 +1,7 @@
 {
   "name": "financial-report",
   "displayName": "Financial Report",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Classify research fund ledgers and learn local rules from human reviews",
   "author": {
     "name": "BIU Research Authority"

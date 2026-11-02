@@ -2,11 +2,13 @@
 """Token-protected localhost receiver for explicit browser review decisions."""
 
 import argparse
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import hmac
 import json
 from pathlib import Path
 import secrets
+from urllib.parse import urlparse
 
 from memory_store import connect, ingest_decision
 
@@ -25,14 +27,39 @@ def handler_for(db_path, token):
         def log_message(self, *_args):
             pass  # Do not put financial text or bearer tokens in service logs.
 
+        def allowed_origin(self):
+            origin = self.headers.get("Origin", "")
+            if origin == "null":  # A report opened as a local file in Codex desktop.
+                return origin
+            parsed = urlparse(origin)
+            if parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost"):
+                return origin
+            return None
+
         def reply(self, status, payload):
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
+            origin = self.allowed_origin()
+            if origin:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Vary", "Origin")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+
+        def do_OPTIONS(self):
+            if not self.path.rstrip("/").endswith("/decisions") or not self.allowed_origin():
+                self.reply(403, {"error": "forbidden origin"})
+                return
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", self.allowed_origin())
+            self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            self.send_header("Vary", "Origin")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def do_GET(self):
             if self.path.rstrip("/").endswith("/health"):
@@ -53,7 +80,7 @@ def handler_for(db_path, token):
                 if length < 2 or length > 32768:
                     raise ValueError("invalid request size")
                 item = json.loads(self.rfile.read(length))
-                with connect(db_path) as db:
+                with closing(connect(db_path)) as db:
                     key = ingest_decision(db, item)
                 self.reply(200, {"saved": True, "decision_key": key})
             except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
@@ -69,7 +96,7 @@ def main():
     parser.add_argument("--port", type=int, default=8898)
     args = parser.parse_args()
     token = load_token(args.token_file)
-    with connect(args.db):
+    with closing(connect(args.db)):
         pass
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(args.db, token))
     try:

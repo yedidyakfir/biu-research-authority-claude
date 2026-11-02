@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 from validate_report import validate
 
 
@@ -14,13 +15,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("json_file", type=Path)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--memory-endpoint", help="Same-origin path to the device-local decision receiver")
+    parser.add_argument("--memory-endpoint", help="Same-origin path or loopback URL to the device-local decision receiver")
     parser.add_argument("--memory-token-file", type=Path, help="Local bearer-token file for that receiver")
     args = parser.parse_args()
     if bool(args.memory_endpoint) != bool(args.memory_token_file):
         parser.error("--memory-endpoint and --memory-token-file must be used together")
-    if args.memory_endpoint and (not args.memory_endpoint.startswith("/") or args.memory_endpoint.startswith("//")):
-        parser.error("memory endpoint must be a same-origin path")
+    if args.memory_endpoint:
+        parsed = urlparse(args.memory_endpoint)
+        same_origin = args.memory_endpoint.startswith("/") and not args.memory_endpoint.startswith("//")
+        loopback = parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost") and parsed.path.endswith("/decisions")
+        if not (same_origin or loopback):
+            parser.error("memory endpoint must be a same-origin path or a loopback HTTP URL")
     report = json.loads(args.json_file.read_text(encoding="utf-8"))
     errors, counts = validate(report)
     if errors:

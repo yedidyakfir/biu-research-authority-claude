@@ -1,0 +1,20 @@
+{
+  "name": "biu-research-authority",
+  "interface": {
+    "displayName": "BIU Research Authority"
+  },
+  "plugins": [
+    {
+      "name": "financial-report",
+      "source": {
+        "source": "local",
+        "path": "./plugins/financial-report"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

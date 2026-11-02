@@ -106,6 +106,12 @@ class MemoryTest(unittest.TestCase):
             with self.assertRaises(HTTPError) as denied:
                 urlopen(Request(url, data=body, headers={"Content-Type": "application/json"}), timeout=5)
             self.assertEqual(denied.exception.code, 401)
+            preflight = Request(url, method="OPTIONS", headers={"Origin": "http://127.0.0.1:8896",
+                                                                 "Access-Control-Request-Method": "POST",
+                                                                 "Access-Control-Request-Headers": "Authorization, Content-Type"})
+            with urlopen(preflight, timeout=5) as response:
+                self.assertEqual(response.status, 204)
+                self.assertEqual(response.headers["Access-Control-Allow-Origin"], "http://127.0.0.1:8896")
             with urlopen(Request(url, data=body, headers={"Content-Type": "application/json",
                                                  "Authorization": "Bearer secret"}), timeout=5) as response:
                 self.assertEqual(response.status, 200)

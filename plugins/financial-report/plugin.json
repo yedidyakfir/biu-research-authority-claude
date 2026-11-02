@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "financial-report",
+  "version": "0.3.0",
+  "description": "Classify research fund transactions and learn local rules from reviewed decisions",
+  "author": {
+    "name": "BIU Research Authority"
+  },
+  "repository": "https://github.com/yedidyakfir/biu-research-authority-claude",
+  "keywords": ["research", "finance", "reports"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Financial Report",
+        "shortDescription": "Review research fund expenses",
+        "longDescription": "Classify fund ledger transactions against foundation-specific categories, review uncertain rows, and learn narrow rules from reviewer decisions stored locally.",
+        "developerName": "BIU Research Authority",
+        "category": "Productivity"
+      }
+    }
+  }
+}
