@@ -11,13 +11,13 @@
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <div class="breadcrumb"><span class="mark" aria-hidden="true"></span><span>רשות המחקר</span><span class="slash">/</span><span>בדיקת דוח כספי</span></div>
-      <div class="header-actions"><span id="saveState" class="save-state" aria-live="polite">השינויים נשמרים בדפדפן זה</span><button type="button" class="button button-quiet" id="saveJsonTop">שמירת JSON</button></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>רשות המחקר</span><span class="brand-divider">/</span><span>סיווג הוצאות</span></div>
+      <span id="saveState" class="save-state" aria-live="polite">השינויים נשמרים בדפדפן</span>
     </div>
     <div class="nav-wrap">
       <nav class="section-nav" aria-label="ניווט בדוח">
         <a href="#overview" class="active">סקירה</a>
-        <a href="#review">תנועות</a>
+        <a href="#review">בדיקה</a>
         <a href="#export">ייצוא</a>
       </nav>
     </div>
@@ -25,57 +25,51 @@
   </header>
 
   <main>
-    <section id="overview" class="section intro">
-      <div class="intro-grid">
-        <div class="intro-copy">
-          <p class="section-kicker">בדיקת תנועות בקרן מחקר</p>
-          <h1>סיווג שאפשר לסמוך עליו מתחיל בשורות שדורשות עין אנושית.</h1>
-          <p class="lead">ההצעות מסודרות לפי שורות הדוח. כל שורה לא ברורה מסומנת באדום עם הסבר למה נדרשת בדיקה.</p>
-          <div class="file-line"><span class="file-icon" aria-hidden="true">X</span><span id="fileName"></span></div>
+    <section id="overview" class="section overview">
+      <div class="overview-main">
+        <div>
+          <p class="eyebrow">בדיקת דוח כספי</p>
+          <h1><span id="pendingHero">0</span> תנועות לבדיקה</h1>
+          <p class="intro-line">בחרו סיווג ונמקו. אם חסר מידע, השאירו את השורה לבדיקה.</p>
         </div>
-        <div class="attention" aria-live="polite">
-          <span class="attention-label">דורשות בדיקה</span>
-          <strong id="pendingHero">0</strong>
-          <span class="attention-foot">תנועות שלא כדאי לסווג בלי מידע נוסף</span>
-          <button type="button" class="button button-dark" id="goReview">הצגת התנועות</button>
+        <div class="progress-box" aria-live="polite">
+          <span id="progressText">0 מתוך 0 טופלו</span>
+          <div class="completion-track" aria-hidden="true"><span id="completionBar"></span></div>
         </div>
       </div>
-      <div class="context-note"><span class="context-dot" aria-hidden="true"></span><div><p id="policyScope"></p><a id="sourceLink" target="_blank" rel="noopener noreferrer">הנחיות הקרן ששימשו לסיווג</a></div></div>
-      <div class="metric-grid" aria-label="סיכום הדוח">
-        <div class="metric"><span>תנועות בדוח</span><strong id="totalCount">0</strong></div>
-        <div class="metric"><span>סיווג מוצע</span><strong id="classifiedCount">0</strong></div>
-        <div class="metric"><span>לא הוצאה</span><strong id="nonExpenseCount">0</strong></div>
-        <div class="metric"><span>התאמה לבדיקת זכאות</span><strong>לא אומתה</strong></div>
-      </div>
-      <div class="category-panel">
-        <div class="panel-heading"><div><h2>סיווגים בדוח</h2><p>הקטגוריות מגיעות מקובץ ההנחיות של הקרן.</p></div><span id="foundationName"></span></div>
-        <div id="categorySummary" class="category-summary"></div>
+      <div class="report-line"><span id="fileName"></span><span class="line-dot" aria-hidden="true"></span><span id="foundationName"></span></div>
+      <div class="policy-line">
+        <span class="policy-icon" aria-hidden="true">!</span>
+        <span>סיווג מוצע בלבד. הזכאות לפי התקציב המאושר טרם אומתה.</span>
+        <details><summary>על הכללים</summary><p id="policyScope"></p><a id="sourceLink" target="_blank" rel="noopener noreferrer">הנחיות הקרן</a></details>
       </div>
     </section>
 
     <section id="review" class="section review-section">
-      <div class="section-head"><div><p class="section-kicker">עוברים שורה־שורה</p><h2>תנועות לבדיקה</h2><p>אפשר לבחור סיווג, לשנות מצב ולכתוב מה עוד נדרש כדי להחליט.</p></div><div class="review-tally"><strong id="pendingSection">0</strong><span>עדיין דורשות בדיקה</span></div></div>
+      <div class="section-heading"><h2>תנועות</h2><span id="resultsInfo" aria-live="polite"></span></div>
       <div class="review-toolbar">
-        <div class="filter-tabs" role="group" aria-label="סינון לפי מצב">
-          <button type="button" data-filter="pending" class="selected">דורש בדיקה</button>
-          <button type="button" data-filter="all">כל התנועות</button>
+        <div class="filter-tabs" role="group" aria-label="סינון תנועות">
+          <button type="button" data-filter="pending" class="selected">דורש בדיקה <span id="pendingSection">0</span></button>
+          <button type="button" data-filter="all">הכל</button>
           <button type="button" data-filter="classified">סווג</button>
           <button type="button" data-filter="not_expense">לא הוצאה</button>
         </div>
-        <label class="search-box"><span>חיפוש</span><input id="search" type="search" placeholder="חשבון, ספק, תיאור או מספר שורה" autocomplete="off"></label>
+        <label class="search-box"><span class="sr-only">חיפוש בתנועות</span><input id="search" type="search" placeholder="חיפוש בתנועות" autocomplete="off"></label>
       </div>
-      <div id="resultsInfo" class="results-info" aria-live="polite"></div>
       <div id="recordList" class="record-list"></div>
-      <button type="button" id="showMore" class="button button-outline" hidden>הצגת תנועות נוספות</button>
+      <button type="button" id="showMore" class="button button-outline" hidden>הצגת עוד תנועות</button>
     </section>
 
     <section id="export" class="section export-section">
-      <div class="export-grid">
-        <div><p class="section-kicker">אחרי הבדיקה</p><h2>לשמור ולהמשיך לעבוד</h2><p>קובץ JSON שומר את החלטות הבדיקה וניתן לייבא אותו בחזרה לעמוד הזה. קובץ Excel חדש כולל את נתוני המקור ואת עמודות הסיווג וההסברים.</p><p class="export-caveat">עותק המקור נשמר בנפרד. קובץ Excel המיוצא הוא גיליון פשוט: עיצוב, תרשימים ואובייקטים מיוחדים מקובץ המקור אינם מועתקים.</p></div>
-        <div class="export-actions"><button type="button" id="exportXlsx" class="button button-primary">ייצוא ל־Excel</button><button type="button" id="saveJson" class="button button-outline">שמירת JSON</button><button type="button" id="importJson" class="button button-quiet">טעינת JSON קודם</button><p id="exportStatus" role="status"></p></div>
+      <div class="export-panel">
+        <div><h2>שמירה וייצוא</h2><p>הבדיקה נשמרת בדפדפן זה. כדי להעביר אותה למחשב אחר, שמרו גם JSON.</p></div>
+        <div class="export-actions"><button type="button" id="exportXlsx" class="button button-primary">ייצוא ל־Excel</button><button type="button" id="saveJson" class="button button-outline">שמירת JSON</button><button type="button" id="importJson" class="button button-quiet">טעינת JSON</button></div>
+        <p id="exportStatus" class="export-status" role="status"></p>
+        <details class="export-details"><summary>מה כולל קובץ Excel?</summary><p>כל ערכי המקור ועמודות הסיווג. עיצוב ותרשימים מהקובץ המקורי אינם מועתקים. עותק המקור נשמר בנפרד.</p></details>
       </div>
     </section>
   </main>
+
   <input type="file" id="jsonPicker" accept=".json,application/json" hidden>
   <script id="report-data" type="application/json">__REPORT_JSON__</script>
   <script>/*__XLSX_EXPORT__*/</script>

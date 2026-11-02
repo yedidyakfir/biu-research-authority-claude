@@ -11,7 +11,7 @@
   const display = report.source.display_columns || {};
   let filter = "pending";
   let search = "";
-  let limit = 24;
+  let limit = 12;
 
   const $ = id => document.getElementById(id);
   const cellValue = cell => cell == null ? "" : typeof cell === "object" ? (cell.display ?? cell.v ?? "") : cell;
@@ -44,7 +44,7 @@
         if (edit) record.classification = { ...record.classification, ...edit };
       }
     } catch (error) {
-      $("saveState").textContent = "שמירה בדפדפן אינה זמינה; שמרו JSON כדי לשמור התקדמות";
+      $("saveState").textContent = "שמירה מקומית אינה זמינה";
     }
   }
 
@@ -52,9 +52,9 @@
     try {
       const edits = records.map(record => ({ row: record.row, classification: record.classification }));
       localStorage.setItem(draftKey, JSON.stringify({ source_sha256: report.source.sha256, edits }));
-      $("saveState").textContent = "השינויים נשמרים בדפדפן זה";
+      $("saveState").textContent = "השינויים נשמרים בדפדפן";
     } catch (error) {
-      $("saveState").textContent = "שמירה בדפדפן אינה זמינה; שמרו JSON כדי לשמור התקדמות";
+      $("saveState").textContent = "שמירה מקומית אינה זמינה";
     }
   }
 
@@ -71,21 +71,8 @@
     const counts = countByStatus();
     $("pendingHero").textContent = counts.pending.toLocaleString("he-IL");
     $("pendingSection").textContent = counts.pending.toLocaleString("he-IL");
-    $("totalCount").textContent = counts.total.toLocaleString("he-IL");
-    $("classifiedCount").textContent = counts.classified.toLocaleString("he-IL");
-    $("nonExpenseCount").textContent = counts.notExpense.toLocaleString("he-IL");
-    const summary = $("categorySummary");
-    summary.replaceChildren();
-    for (const category of report.foundation.categories) {
-      const item = document.createElement("div");
-      item.className = "category-item";
-      const label = document.createElement("span");
-      label.textContent = category.label_he;
-      const count = document.createElement("strong");
-      count.textContent = records.filter(record => record.classification.category_id === category.id).length.toLocaleString("he-IL");
-      item.append(label, count);
-      summary.append(item);
-    }
+    $("progressText").textContent = `${(counts.total - counts.pending).toLocaleString("he-IL")} מתוך ${counts.total.toLocaleString("he-IL")} טופלו`;
+    $("completionBar").style.width = `${counts.total ? (counts.total - counts.pending) / counts.total * 100 : 100}%`;
   }
 
   function amountFor(record) {
@@ -130,59 +117,83 @@
 
   function makeCard(record) {
     const card = document.createElement("article");
-    card.className = `record-card ${pending(record) ? "pending" : record.classification.status === "not_expense" ? "not-expense" : ""}`;
-    card.innerHTML = '<div class="record-top"><div><div class="record-meta"><span class="row-id"></span><span class="record-badge"></span><span class="record-account"></span></div><h3 class="record-title"></h3><p class="record-desc"></p></div><div class="record-amount"></div></div><p class="record-warning"></p><div class="review-form"><label class="field">סיווג מוצע<select class="category-select"></select></label><label class="field">מצב בדיקה<select class="status-select"><option value="needs_review">דורש בדיקה</option><option value="classified">סווג</option><option value="not_expense">לא הוצאה</option></select></label><label class="field field-wide">למה נבחר הסיווג<textarea class="rationale" placeholder="הסבר קצר על בסיס פרטי התנועה"></textarea></label><label class="field field-wide">מה עדיין לא ברור<textarea class="uncertainty" placeholder="איזה מסמך או פרט חסר כדי להחליט"></textarea></label></div>';
+    card.innerHTML = '<div class="record-top"><div><div class="record-meta"><span class="row-id"></span><span class="record-badge"></span><span class="record-account"></span><span class="record-category"></span></div><h3 class="record-title"></h3></div><div class="record-amount"></div></div><p class="record-reason"></p><div class="record-actions-top"><button type="button" class="edit-toggle">עריכה</button></div><div class="edit-panel"><div class="edit-grid"><label class="field">סיווג<select class="category-select"></select></label><label class="field">נימוק קצר<input class="rationale" type="text" placeholder="למה נבחר הסיווג"></label></div><div class="decision-actions"><button type="button" class="button button-primary confirm-classification">אישור סיווג</button><button type="button" class="button button-outline mark-non-expense">לא הוצאה</button><button type="button" class="button button-danger-quiet mark-pending">השאר לבדיקה</button><span class="action-feedback" role="alert"></span></div><details class="uncertainty-edit"><summary>עריכת סיבת הבדיקה</summary><label class="field">מה חסר כדי להחליט?<textarea class="uncertainty" rows="2"></textarea></label></details></div>';
     card.querySelector(".row-id").textContent = `שורה ${record.row}`;
-    card.querySelector(".record-badge").textContent = pending(record) ? "דורש בדיקה" : statusText[record.classification.status];
     card.querySelector(".record-account").textContent = text(at(record, display.account));
     const description = text(at(record, display.description)).trim();
-    card.querySelector(".record-title").textContent = description ? description.slice(0, 125) : `תנועה בשורה ${record.row}`;
-    card.querySelector(".record-desc").textContent = description.length > 125 ? description.slice(125, 320) : text(at(record, display.reference)).slice(0, 220);
-    const amount = amountFor(record);
-    card.querySelector(".record-amount").textContent = amount;
-    const warning = card.querySelector(".record-warning");
-    warning.textContent = warningFor(record);
-    warning.hidden = !pending(record);
+    card.querySelector(".record-title").textContent = description ? description.slice(0, 200) : text(at(record, display.reference)).slice(0, 200) || `תנועה בשורה ${record.row}`;
+    card.querySelector(".record-amount").textContent = amountFor(record);
+    const warning = card.querySelector(".record-reason");
+    const editToggle = card.querySelector(".edit-toggle");
+    const editPanel = card.querySelector(".edit-panel");
+    const feedback = card.querySelector(".action-feedback");
     const refreshCard = () => {
-      card.className = `record-card ${pending(record) ? "pending" : record.classification.status === "not_expense" ? "not-expense" : ""}`;
-      card.querySelector(".record-badge").textContent = pending(record) ? "דורש בדיקה" : statusText[record.classification.status];
+      const needsReview = pending(record);
+      card.className = `record-card ${needsReview ? "pending" : record.classification.status === "not_expense" ? "not-expense" : ""}`;
+      card.querySelector(".record-badge").textContent = needsReview ? "דורש בדיקה" : statusText[record.classification.status];
+      const category = categories.get(record.classification.category_id);
+      card.querySelector(".record-category").textContent = !needsReview && category ? category.label_he : "";
       warning.textContent = warningFor(record);
-      warning.hidden = !pending(record);
+      warning.hidden = !needsReview;
+      editToggle.hidden = needsReview;
+      if (needsReview) editPanel.hidden = false;
+      card.querySelector(".mark-pending").hidden = record.classification.status === "needs_review";
     };
     const categorySelect = card.querySelector(".category-select");
-    categorySelect.add(new Option("לא נבחר סיווג", ""));
+    categorySelect.add(new Option("בחרו סיווג", ""));
     for (const category of report.foundation.categories) categorySelect.add(new Option(category.label_he, category.id));
     categorySelect.value = record.classification.category_id || "";
     categorySelect.addEventListener("change", () => {
       record.classification.category_id = categorySelect.value || null;
+      feedback.textContent = "";
       saveDraft(); updateOverview(); refreshCard();
-    });
-    const statusSelect = card.querySelector(".status-select");
-    statusSelect.value = record.classification.status;
-    statusSelect.addEventListener("change", () => {
-      const next = statusSelect.value;
-      if (next === "classified" && !record.classification.category_id) {
-        statusSelect.value = record.classification.status;
-        categorySelect.focus();
-        $("exportStatus").textContent = "בחרו סיווג לפני סימון התנועה כסווגה.";
-        return;
-      }
-      record.classification.status = next;
-      if (next === "not_expense") record.classification.category_id = null;
-      if (next !== "needs_review") record.classification.uncertainty_reason = "";
-      saveDraft(); updateOverview(); renderList();
     });
     const rationale = card.querySelector(".rationale");
     rationale.value = text(record.classification.rationale);
-    rationale.addEventListener("input", () => { record.classification.rationale = rationale.value; saveDraft(); updateOverview(); refreshCard(); });
-    rationale.addEventListener("blur", renderList);
+    rationale.addEventListener("input", () => { record.classification.rationale = rationale.value; feedback.textContent = ""; saveDraft(); updateOverview(); refreshCard(); });
     const uncertainty = card.querySelector(".uncertainty");
     uncertainty.value = text(record.classification.uncertainty_reason);
     uncertainty.addEventListener("input", () => {
       record.classification.uncertainty_reason = uncertainty.value;
+      feedback.textContent = "";
       saveDraft(); refreshCard();
     });
-    uncertainty.addEventListener("blur", renderList);
+    editToggle.addEventListener("click", () => {
+      editPanel.hidden = !editPanel.hidden;
+      editToggle.textContent = editPanel.hidden ? "עריכה" : "סגירה";
+    });
+    const complete = status => {
+      if (status === "classified" && !record.classification.category_id) {
+        feedback.textContent = "בחרו סיווג.";
+        categorySelect.focus();
+        return;
+      }
+      if (!rationale.value.trim()) {
+        feedback.textContent = status === "not_expense" ? "כתבו למה זו אינה הוצאה." : "כתבו נימוק קצר.";
+        rationale.focus();
+        return;
+      }
+      record.classification.status = status;
+      record.classification.rationale = rationale.value.trim();
+      record.classification.uncertainty_reason = "";
+      if (status === "not_expense") record.classification.category_id = null;
+      saveDraft(); updateOverview(); renderList();
+    };
+    card.querySelector(".confirm-classification").addEventListener("click", () => complete("classified"));
+    card.querySelector(".mark-non-expense").addEventListener("click", () => complete("not_expense"));
+    card.querySelector(".mark-pending").addEventListener("click", () => {
+      if (!uncertainty.value.trim()) {
+        feedback.textContent = "כתבו מה חסר כדי להחליט.";
+        card.querySelector(".uncertainty-edit").open = true;
+        uncertainty.focus();
+        return;
+      }
+      record.classification.status = "needs_review";
+      record.classification.uncertainty_reason = uncertainty.value.trim();
+      saveDraft(); updateOverview(); renderList();
+    });
+    editPanel.hidden = !pending(record);
+    refreshCard();
     card.append(detailList(record));
     return card;
   }
@@ -201,7 +212,7 @@
       hint.textContent = filter === "pending" && !search ? "אפשר לעבור ל׳כל התנועות׳ כדי לראות את הדוח המלא." : "אפשר לשנות את החיפוש או את המסנן.";
       empty.append(strong, hint); list.append(empty);
     }
-    $("resultsInfo").textContent = `מוצגות ${Math.min(filtered.length, limit).toLocaleString("he-IL")} מתוך ${filtered.length.toLocaleString("he-IL")} תנועות`;
+    $("resultsInfo").textContent = `${Math.min(filtered.length, limit).toLocaleString("he-IL")} מתוך ${filtered.length.toLocaleString("he-IL")}`;
     $("showMore").hidden = filtered.length <= limit;
   }
 
@@ -278,7 +289,7 @@
     $("readingProgress").style.width = `${available > 0 ? Math.min(100, window.scrollY / available * 100) : 100}%`;
     const sections = ["overview", "review", "export"];
     let active = "overview";
-    for (const id of sections) if ($(id).getBoundingClientRect().top < 190) active = id;
+    for (const id of sections) if ($(id).getBoundingClientRect().top < 140) active = id;
     document.querySelectorAll(".section-nav a").forEach(link => link.classList.toggle("active", link.hash === `#${active}`));
   }
 
@@ -289,16 +300,14 @@
   const sourceUrl = report.foundation.source?.url || "";
   $("sourceLink").href = /^https:\/\//i.test(sourceUrl) ? sourceUrl : "#overview";
   updateOverview(); renderList(); updateReadingProgress();
-  $("goReview").addEventListener("click", () => $("review").scrollIntoView({ behavior: "smooth" }));
   document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => {
-    filter = button.dataset.filter; limit = 24;
+    filter = button.dataset.filter; limit = 12;
     document.querySelectorAll("[data-filter]").forEach(other => other.classList.toggle("selected", other === button));
     renderList();
   }));
-  $("search").addEventListener("input", event => { search = event.target.value.trim().toLocaleLowerCase(); limit = 24; renderList(); });
-  $("showMore").addEventListener("click", () => { limit += 24; renderList(); });
+  $("search").addEventListener("input", event => { search = event.target.value.trim().toLocaleLowerCase(); limit = 12; renderList(); });
+  $("showMore").addEventListener("click", () => { limit += 12; renderList(); });
   $("saveJson").addEventListener("click", saveJson);
-  $("saveJsonTop").addEventListener("click", saveJson);
   $("exportXlsx").addEventListener("click", exportExcel);
   $("importJson").addEventListener("click", () => $("jsonPicker").click());
   $("jsonPicker").addEventListener("change", event => { if (event.target.files[0]) importJson(event.target.files[0]); event.target.value = ""; });
