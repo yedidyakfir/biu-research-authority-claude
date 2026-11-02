@@ -1,0 +1,88 @@
+{
+  "id": "isf",
+  "name": "Israel Science Foundation",
+  "name_he": "הקרן הלאומית למדע",
+  "program": "Personal research grants",
+  "program_he": "מענקי מחקר אישיים",
+  "cycle": "November 2025 application / 2025–26 guidance",
+  "scope_note": "This is the personal-grant budget taxonomy, not a global ISF taxonomy. Financial reporting follows the grant's approved budget lines. Confirm the program, award year, approved budget, and any written exceptions before deciding eligibility.",
+  "scope_note_he": "הסיווגים מבוססים על הנחיות המענק האישי לשנת 2025/26. אין רשימת קטגוריות אחידה שאומתה לכל מסלולי הקרן. בדוח כספי קובעות שורות התקציב המאושר; לפני בדיקת זכאות יש לאמת מסלול, שנת מענק, תקציב ואישורים בכתב.",
+  "source": {
+    "url": "https://www.isf.org.il/Files/GuidelinesPersonalGrant_Heb_3058_1.pdf",
+    "sections": "4, 6.3.5"
+  },
+  "categories": [
+    {
+      "id": "personnel",
+      "label_he": "כוח אדם",
+      "label_en": "Personnel",
+      "examples": "Research staff, graduate students, and postdoctoral researchers charged to the grant.",
+      "review_when": "Employment role, grant allocation, or investigator/faculty eligibility is unclear."
+    },
+    {
+      "id": "research_tools_materials",
+      "label_he": "חומרים וכלי מחקר",
+      "label_en": "Research tools and materials",
+      "examples": "Research consumables and minor tools used in the project.",
+      "review_when": "The item could instead be dedicated equipment, computing, a service, or general infrastructure."
+    },
+    {
+      "id": "services",
+      "label_he": "שירותים",
+      "label_en": "Services",
+      "examples": "Consulting, samples or data, participant payments, maintenance, and a one-time research repository deposit.",
+      "review_when": "The invoice does not show the research service or its project connection."
+    },
+    {
+      "id": "other_expenses",
+      "label_he": "הוצאות אחרות",
+      "label_en": "Other expenses",
+      "examples": "Essential project-specific expenses that do not fit another heading, including narrowly permitted scientific travel for grant-funded graduate students or postdocs.",
+      "review_when": "The item may be routine travel, hospitality, or another excluded cost; do not use this as a catch-all."
+    },
+    {
+      "id": "computing",
+      "label_he": "מחשוב",
+      "label_en": "Computing",
+      "examples": "Software, computers, cloud services, peripherals, and dedicated computing.",
+      "review_when": "The charge is a general infrastructure purchase or the computer user and purpose are unclear."
+    },
+    {
+      "id": "miscellaneous",
+      "label_he": "שונות",
+      "label_en": "Miscellaneous",
+      "examples": "Professional literature, journal publication and needed editing or translation, photocopies, office supplies, office/lab internet, and principal investigator society dues.",
+      "review_when": "The expense lacks a direct research connection or the annual miscellaneous cap may be exceeded."
+    },
+    {
+      "id": "dedicated_equipment",
+      "label_he": "ציוד ייעודי",
+      "label_en": "Dedicated equipment",
+      "examples": "Equipment specifically required for the project, including acquisition costs.",
+      "review_when": "Purpose, approved budget line, or equipment cap is unclear."
+    },
+    {
+      "id": "additional_funding",
+      "label_he": "מימון תוספתי",
+      "label_en": "Additional funding",
+      "examples": "Special marine research vessel use under the relevant additional-funding provision.",
+      "review_when": "There is no explicit marine vessel approval; never infer this category from an ordinary travel or equipment charge."
+    },
+    {
+      "id": "overhead",
+      "label_he": "תקורה",
+      "label_en": "Institutional overhead",
+      "examples": "Overhead in the approved budget summary; generally not an ordinary transaction expense.",
+      "review_when": "The row is an ordinary cost or the approved overhead basis is not available."
+    }
+  ],
+  "policy_checks": [
+    "The approved grant budget line controls financial reporting; a category match does not establish eligibility.",
+    "The personal-grant guide caps miscellaneous expenses at 15% of each annual budget.",
+    "The personal-grant guide caps dedicated equipment at NIS 120,000 including acquisition costs.",
+    "Qualifying grant-funded graduate student or postdoctoral scientific travel is limited to NIS 6,000 per year in this guide.",
+    "The guide generally excludes applicant or eligible faculty pay, routine travel and per diem, hospitality, foreign visitor costs, building infrastructure, and warehouse loading above 7% of purchase value.",
+    "Exceptions require prior written ISF approval."
+  ],
+  "cross_program_note": "Other ISF programs differ: quantum research, MAVRI biomedical research, and publication grants use different headings or limits; do not apply this personal-grant reference to them without their own reference files."
+}

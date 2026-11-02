@@ -1,8 +1,8 @@
 {
   "name": "financial-report",
   "displayName": "Financial Report",
-  "version": "0.0.1",
-  "description": "Research fund financial report workflows; skills are in preparation",
+  "version": "0.1.0",
+  "description": "Classify research fund ledger transactions and review uncertain rows",
   "author": {
     "name": "BIU Research Authority"
   },
