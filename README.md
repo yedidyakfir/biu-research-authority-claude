@@ -4,7 +4,7 @@ Private Claude Code plugin marketplace for research administration workflows.
 
 ## Current contents
 
-- `financial-report`: includes the `fund-report-analysis` skill for ledger classification and review.
+- `financial-report`: includes `fund-report-analysis` for ledger review and `classification-rule-learning` for device-local learning from human decisions.
 
 ## Add the marketplace
 
@@ -15,7 +15,7 @@ claude plugin marketplace add yedidyakfir/biu-research-authority-claude
 claude plugin install financial-report@biu-research-authority
 ```
 
-The repository contains the plugin and its reusable workflow. Financial source workbooks and classified outputs stay in the ignored local `analysis/` directory.
+The repository contains the plugin and its reusable workflow. Financial source workbooks and classified outputs stay in the ignored local `analysis/` directory. Learned decision history lives in a separate local database on the user's workstation.
 
 The [ISF category research](docs/isf-expense-categories.md) records the initial official-source headings and the checks needed before implementing the skill.
 

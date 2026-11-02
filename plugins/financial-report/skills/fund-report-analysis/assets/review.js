@@ -2,16 +2,19 @@
   "use strict";
 
   const report = JSON.parse(document.getElementById("report-data").textContent);
+  const memoryConfig = JSON.parse(document.getElementById("memory-config").textContent);
   const selectedSheet = report.sheets.find(sheet => sheet.name === report.source.sheet);
   const header = selectedSheet.rows[report.source.header_row - 1] || [];
   const categories = new Map(report.foundation.categories.map(category => [category.id, category]));
   const records = report.records.filter(record => record.kind === "transaction");
   const draftKey = `fund-report-review:${report.report_id}`;
+  const memoryQueueKey = `fund-report-memory-queue:${report.report_id}`;
   const statusText = { classified: "סווג", needs_review: "דורש בדיקה", not_expense: "לא הוצאה" };
   const display = report.source.display_columns || {};
   let filter = "pending";
   let search = "";
   let limit = 12;
+  let syncingMemory = false;
 
   const $ = id => document.getElementById(id);
   const cellValue = cell => cell == null ? "" : typeof cell === "object" ? (cell.display ?? cell.v ?? "") : cell;
@@ -64,6 +67,62 @@
       $("saveState").textContent = "השינויים נשמרים בדפדפן";
     } catch (error) {
       $("saveState").textContent = "שמירה מקומית אינה זמינה";
+    }
+  }
+
+  function decisionPayload(record) {
+    return {
+      foundation_id: report.foundation.id,
+      program: report.foundation.program,
+      source_sha256: report.source.sha256,
+      row: record.row,
+      classification: record.classification,
+      evidence: {
+        account: text(at(record, display.account)),
+        description: text(at(record, display.description)),
+        reference: text(at(record, display.reference)),
+      },
+    };
+  }
+
+  function queueDecision(record) {
+    if (!memoryConfig.endpoint || !memoryConfig.token) return;
+    try {
+      const queue = JSON.parse(localStorage.getItem(memoryQueueKey) || "[]");
+      const item = decisionPayload(record);
+      const remaining = queue.filter(saved => saved.row !== item.row);
+      remaining.push(item);
+      localStorage.setItem(memoryQueueKey, JSON.stringify(remaining));
+      $("saveState").textContent = "נשמר בדפדפן · ממתין לסנכרון";
+      flushMemory();
+    } catch (error) {
+      $("saveState").textContent = "נשמר בדפדפן בלבד";
+    }
+  }
+
+  async function flushMemory() {
+    if (syncingMemory || !memoryConfig.endpoint || !memoryConfig.token) return;
+    syncingMemory = true;
+    try {
+      while (true) {
+        const queue = JSON.parse(localStorage.getItem(memoryQueueKey) || "[]");
+        if (!queue.length) break;
+        const item = queue[0];
+        const response = await fetch(memoryConfig.endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${memoryConfig.token}` },
+          body: JSON.stringify(item),
+        });
+        if (!response.ok) throw new Error(`memory sync ${response.status}`);
+        const latest = JSON.parse(localStorage.getItem(memoryQueueKey) || "[]");
+        if (JSON.stringify(latest[0]) === JSON.stringify(item)) latest.shift();
+        localStorage.setItem(memoryQueueKey, JSON.stringify(latest));
+      }
+      $("saveState").textContent = "ההחלטות נשמרו במכשיר";
+    } catch (error) {
+      $("saveState").textContent = "נשמר בדפדפן בלבד";
+    } finally {
+      syncingMemory = false;
     }
   }
 
@@ -189,8 +248,10 @@
       record.classification.status = status;
       record.classification.rationale = rationale.value.trim();
       record.classification.uncertainty_reason = "";
+      record.classification.reviewed_by_user = true;
+      record.classification.reviewed_at = new Date().toISOString();
       if (status === "not_expense") record.classification.category_id = null;
-      saveDraft(); updateOverview(); renderList();
+      saveDraft(); queueDecision(record); updateOverview(); renderList();
     };
     card.querySelector(".confirm-classification").addEventListener("click", () => complete("classified"));
     card.querySelector(".mark-non-expense").addEventListener("click", () => complete("not_expense"));
@@ -203,7 +264,9 @@
       }
       record.classification.status = "needs_review";
       record.classification.uncertainty_reason = uncertainty.value.trim();
-      saveDraft(); updateOverview(); renderList();
+      record.classification.reviewed_by_user = true;
+      record.classification.reviewed_at = new Date().toISOString();
+      saveDraft(); queueDecision(record); updateOverview(); renderList();
     });
     editPanel.hidden = !pending(record);
     refreshCard();
@@ -291,6 +354,7 @@
         record.classification = { ...record.classification, ...next };
       }
       saveDraft(); updateOverview(); renderList();
+      for (const record of records) if (record.classification.reviewed_by_user) queueDecision(record);
       $("exportStatus").textContent = "החלטות הבדיקה נטענו מקובץ \u2066JSON\u2069.";
     } catch (error) {
       $("exportStatus").textContent = `לא ניתן לטעון את \u2066JSON\u2069: ${error.message}`;
@@ -307,6 +371,7 @@
   }
 
   loadDraft();
+  flushMemory();
   setDisplay($("fileName"), report.source.filename);
   setDisplay($("foundationName"), `${report.foundation.name_he} · ${report.foundation.program_he}`);
   setDisplay($("policyScope"), `${report.foundation.scope_note_he || report.foundation.scope_note} זכאות להוצאה לא נקבעה כאן.`);
@@ -325,5 +390,6 @@
   $("exportXlsx").addEventListener("click", exportExcel);
   $("importJson").addEventListener("click", () => $("jsonPicker").click());
   $("jsonPicker").addEventListener("change", event => { if (event.target.files[0]) importJson(event.target.files[0]); event.target.value = ""; });
+  window.addEventListener("online", flushMemory);
   window.addEventListener("scroll", updateReadingProgress, { passive: true });
 })();
