@@ -1,6 +1,6 @@
 # BIU Research Authority plugin marketplace
 
-Private, Codex-first plugin marketplace for research administration workflows. The same skill package also supports Claude Code.
+Public, Codex-first plugin marketplace for research administration workflows. The same skill package also supports Claude Code. Financial workbooks, classified outputs, and reviewer memory stay on each user's device; they are not stored in this repository.
 
 ## Current contents
 
@@ -8,7 +8,7 @@ Private, Codex-first plugin marketplace for research administration workflows. T
 
 ## Distribute to staff through Codex
 
-For staff who use Codex, a ChatGPT workspace admin can import this private repository once from **Admin > Plugins > Add > Import marketplace**. The native catalog is `.agents/plugins/marketplace.json`; the plugin package is `plugins/financial-report/plugin.json`. Set `financial-report` to **Installed** for the authorized workspace roles, or **Available** if staff should add it themselves. Staff do not need GitHub access. Keep transaction workbooks and the local learning database outside the plugin repository. See the [OpenAI workspace import guide](https://learn.chatgpt.com/docs/enterprise/plugin-management).
+For staff who use Codex, a ChatGPT workspace admin can import this repository once from **Admin > Plugins > Add > Import marketplace**. The native catalog is `.agents/plugins/marketplace.json`; the plugin package is `plugins/financial-report/plugin.json`. Set `financial-report` to **Installed** for the authorized workspace roles, or **Available** if staff should add it themselves. Staff do not need GitHub access. Keep transaction workbooks and the local learning database outside the plugin repository. See the [OpenAI workspace import guide](https://learn.chatgpt.com/docs/enterprise/plugin-management).
 
 For local Codex testing by a maintainer:
 
@@ -19,7 +19,7 @@ codex plugin add financial-report@biu-research-authority
 
 ## Claude Code compatibility
 
-The Claude marketplace manifest remains at `.claude-plugin/marketplace.json`. Authorized maintainers with private-repository access can run:
+The Claude marketplace manifest remains at `.claude-plugin/marketplace.json`. Claude Code users can run:
 
 ```sh
 claude plugin marketplace add yedidyakfir/biu-research-authority-claude
