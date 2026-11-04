@@ -10,6 +10,16 @@ Public, Codex-first plugin marketplace for research administration workflows. Th
 
 For staff who use Codex, a ChatGPT workspace admin can import this repository once from **Admin > Plugins > Add > Import marketplace**. The native catalog is `.agents/plugins/marketplace.json`; the plugin package is `plugins/financial-report/plugin.json`. Set `financial-report` to **Installed** for the authorized workspace roles, or **Available** if staff should add it themselves. Staff do not need GitHub access. Keep transaction workbooks and the local learning database outside the plugin repository. See the [OpenAI workspace import guide](https://learn.chatgpt.com/docs/enterprise/plugin-management).
 
+For an individual Codex desktop installation from GitHub:
+
+```sh
+codex plugin marketplace add yedidyakfir/biu-research-authority-claude --ref main
+codex plugin list --marketplace biu-research-authority --available
+codex plugin add financial-report@biu-research-authority
+```
+
+Restart the ChatGPT desktop app after adding the marketplace. Its display name is **BIU Research Authority**; the single plugin is **Financial Report**. `fund-report-analysis` and `classification-rule-learning` are skills inside that plugin. A GitHub marketplace is separate from the universal public plugin directory.
+
 For local Codex testing by a maintainer:
 
 ```sh
