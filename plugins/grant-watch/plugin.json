@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "grant-watch",
+  "version": "0.2.0",
+  "description": "Track grant calls, opening dates, and deadlines from official sources",
+  "author": {
+    "name": "BIU Research Authority"
+  },
+  "repository": "https://github.com/yedidyakfir/biu-research-authority-claude",
+  "keywords": ["research", "grants", "calls", "deadlines"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Grant Watch",
+        "shortDescription": "Track grant calls and deadlines",
+        "longDescription": "Monitor official grant sources, identify new calls and date changes, and prepare verified notices for research administrators.",
+        "developerName": "BIU Research Authority",
+        "category": "Productivity"
+      }
+    }
+  }
+}
