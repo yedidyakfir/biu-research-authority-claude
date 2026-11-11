@@ -1,0 +1,7 @@
+# Daily Grant Watch task instructions
+
+Fill in the private state location, digest destination, and approved delivery policy during setup. Do not put credentials in the scheduled prompt.
+
+> Run `monitor-grant-calls` for the BIU Research Authority using the configured private Grant Watch state store. Use today's date in `Asia/Jerusalem`. First compute opening and deadline milestones from verified saved call rounds. Then check due official APIs, feeds, and registered funder pages with the saved HTTP validators or relevant-content fingerprints. Research only new, changed, uncertain, or failed sources; reconcile findings with existing program and round records and preserve official evidence. Record the run heartbeat, source coverage, failures, and idempotent events. Return the administrator digest to the configured destination, including new calls, openings, changed and approaching deadlines, and unresolved source failures. Prepare university-wide notices as drafts for the configured approver; do not send them unless the separate publication policy explicitly authorizes it. If state is unavailable or a check is blocked, report the failure and avoid declaring that there were no changes.
+
+The setup skill should add the actual state location and digest destination to this instruction when it creates the task. Confirm the environment can access that location on every run. The prompt invokes the method; it does not replace a durable database, source registry, or executable daily-check capability.

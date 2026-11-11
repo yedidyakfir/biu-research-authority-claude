@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BIU Grant Watch · daily monitoring flow</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, Segoe UI, Arial, sans-serif; background: #f5f7fb; color: #18233b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 920px; margin: auto; padding: 28px 18px 56px; }
+    h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); margin: 0 0 7px; }
+    h2 { font-size: 1.15rem; margin: 32px 0 12px; }
+    p { line-height: 1.5; }
+    .lede { margin: 0 0 24px; color: #526079; }
+    .flow { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+    .box { background: #fff; border: 1px solid #d9e1ef; border-radius: 14px; padding: 15px 18px; box-shadow: 0 3px 12px #2031540b; }
+    .box strong { display: block; font-size: 1.02rem; margin-bottom: 3px; }
+    .box span { color: #526079; line-height: 1.4; }
+    .start { border-left: 6px solid #324acb; }
+    .cheap { border-left: 6px solid #27856a; }
+    .deep { border-left: 6px solid #dc8b1a; }
+    .end { border-left: 6px solid #673bb1; }
+    .warn { border-left: 6px solid #b74646; }
+    .arrow { text-align: center; color: #7d8aa5; line-height: 1; font-size: 22px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .split .box { height: 100%; }
+    .label { display: inline-block; text-transform: uppercase; letter-spacing: .06em; font-size: .7rem; font-weight: 800; color: #66748e; margin-bottom: 5px; }
+    .note { background: #eaf1ff; border-radius: 12px; padding: 13px 16px; }
+    .metric { font-weight: 700; color: #2539a3; }
+    ul { line-height: 1.5; padding-left: 22px; }
+    li + li { margin-top: 6px; }
+    footer { color: #66748e; font-size: .86rem; margin-top: 30px; }
+    @media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Grant Watch: one daily run</h1>
+  <p class="lede">A small, persistent source catalog drives quick checks. Only meaningful changes or failures trigger deeper research.</p>
+
+  <section class="flow" aria-label="Grant monitoring flow graph">
+    <div class="box start"><strong>1 · Daily scheduler + saved state</strong><span>At 07:17 Israel time, load program sources, verified call rounds, deadlines, and the last successful run.</span></div>
+    <div class="arrow" aria-hidden="true">↓</div>
+    <div class="split">
+      <div class="box cheap"><span class="label">Calendar lane</span><strong>Compute today's milestones</strong><span>Opening day, closing day, and configured deadline reminders come from stored verified dates. This runs even when every website is unchanged.</span></div>
+      <div class="box cheap"><span class="label">Source lane</span><strong>Quick official-source checks</strong><span>Check APIs/feeds and registered pages with ETag/Last-Modified or a relevant-section fingerprint. Log redirects, blocks, and check freshness.</span></div>
+    </div>
+    <div class="arrow" aria-hidden="true">↓</div>
+    <div class="split">
+      <div class="box cheap"><span class="label">Unchanged</span><strong>Keep prior facts</strong><span>No model research and no duplicate alert. Record that the source was checked successfully.</span></div>
+      <div class="box deep"><span class="label">New, changed, or uncertain</span><strong>Focused research</strong><span>Read the changed official call and linked documents. Verify call identity, submission stage, opening and deadline dates, timezone, and evidence.</span></div>
+    </div>
+    <div class="arrow" aria-hidden="true">↓</div>
+    <div class="box start"><strong>2 · Reconcile and save events</strong><span>Update the program and dated call round. Create one event per new call, opening, deadline revision, reminder, or closing. Keep old and new evidence.</span></div>
+    <div class="arrow" aria-hidden="true">↓</div>
+    <div class="split">
+      <div class="box end"><span class="label">Every day</span><strong>Administrator digest</strong><span>Changes, upcoming deadlines, failed checks, and coverage freshness. Generate from saved facts without an LLM pass over all grants.</span></div>
+      <div class="box end"><span class="label">Verified event</span><strong>University notice draft</strong><span>Include the official link and exact stage/date; send through Research Authority review and its authorized distribution channel.</span></div>
+    </div>
+    <div class="arrow" aria-hidden="true">↘</div>
+    <div class="box warn"><strong>Failure lane: never treat silence as “no change”</strong><span>Missed run, CAPTCHA, 403, login wall, stale source, or parser failure enters the digest and repair queue. A monthly independent audit looks for moved and newly relevant programs.</span></div>
+  </section>
+
+  <h2>Why this is efficient</h2>
+  <p>For the supplied seed, <span class="metric">41 old call rows map to 39 distinct funder URLs</span>. The routine check is HTTP and database work; model tokens are spent only on changed or uncertain evidence. Old 2019–2025 deadlines are never rolled into a new year.</p>
+
+  <h2>What coverage means</h2>
+  <p>Accessible sources checked daily can normally surface a published change by the next completed run. No known URL list guarantees every new grant: blocked pages, unlisted programs, and missed jobs need explicit fallback checks. The digest reports these gaps instead of claiming full coverage.</p>
+
+  <p class="note"><strong>Current scope:</strong> the monitoring and setup skills are prepared; no recurring job or outbound message channel has been connected yet. The pilot fetched three sample funder URLs: one redirected, one lacked HTTP cache validators, and one returned 403.</p>
+
+  <footer>BIU Research Authority · design pilot · 10 November 2026</footer>
+</main>
+</body>
+</html>

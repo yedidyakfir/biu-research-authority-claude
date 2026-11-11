@@ -1,5 +1,6 @@
 {
   "name": "biu-research-authority",
+  "version": "0.2.0",
   "description": "Research administration plugins for Bar-Ilan University",
   "owner": {
     "name": "BIU Research Authority"
@@ -9,6 +10,12 @@
       "name": "financial-report",
       "source": "./plugins/financial-report",
       "description": "Financial report workflows for research funds"
+    },
+    {
+      "name": "grant-watch",
+      "version": "0.2.0",
+      "source": "./plugins/grant-watch",
+      "description": "Monitor grant calls, opening dates, and deadlines"
     }
   ]
 }
