@@ -51,3 +51,12 @@ Before describing a call as actionable, inspect its linked stage requirements an
 - These are preliminary applicability checks, not a full eligibility assessment or authority to decide a researcher's individual qualification.
 
 Test these cases with synthetic fixtures. Before rollout also exercise them through the actual agent, intended Notion workspace and configured delivery path. Unit tests protect the deterministic contract only; they do not reproduce or diagnose any previously reported missing-email or empty-dashboard incident.
+
+
+## Approved email connector path
+
+After owner approval is recorded in the configuration, call Gmail get_profile during each execution and compare its authenticated email with the exact configured sender. Do not merely set a From header to an unverified account. Read back the saved digest before preparing connector arguments with pilot_contract.prepare_email. That helper creates HTML with escaped text, exact approved To recipients, no CC/BCC, and the unique run key in the subject. It does not send mail.
+
+Prepare only when delivery is ready. Persist a delivery intent in the run record before calling Gmail send_email with the prepared arguments; record the provider message ID and timestamp after success, then read the message back to verify SENT status and intended sender/recipients. Existing sent/uncertain/pending records require reconciliation against sent mail and the unique run identifier; do not blindly resend. A crash between send and receipt write must not trigger an automatic duplicate.
+
+Send the actual source-backed daily report, including honest coverage limitations or an explicitly empty outcome. Never send synthetic connection-test fixtures to report recipients. A completed manual connector test does not prove that the scheduled execution has access; inspect the scheduled run itself. Keep recipient addresses and connection IDs in the private Notion configuration, not this public repository.

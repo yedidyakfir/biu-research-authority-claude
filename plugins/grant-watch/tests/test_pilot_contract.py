@@ -106,5 +106,35 @@ class ReportingRegressionTests(unittest.TestCase):
         self.assertEqual(pilot.institution_status(None, True), "verification_pending")
 
 
+class EmailPreparationTests(unittest.TestCase):
+    def config(self):
+        return {"email": dict(enabled=True, owner_approved=True,
+                             sender="sender@example.org",
+                             recipients=["one@example.org", "two@example.org"],
+                             approved_recipients=["one@example.org", "two@example.org"])}
+
+    def test_exact_recipients_and_safe_html(self):
+        result = pilot.prepare_email(self.config(), "sender@example.org", "2026-11-18",
+                                     "Report <script>alert(1)</script>", "ready")
+        self.assertEqual(result["to"], "one@example.org, two@example.org")
+        self.assertNotIn("cc", result)
+        self.assertNotIn("bcc", result)
+        self.assertIn("&lt;script&gt;", result["payload"]["body"]["content"])
+        self.assertIn("grant-watch:2026-11-18", result["subject"])
+
+    def test_no_blind_resend(self):
+        for state in ("sent", "pending", "uncertain", "disabled", "blocked"):
+            with self.assertRaises(ValueError):
+                pilot.prepare_email(self.config(), "sender@example.org", "2026-11-18", "Report", state)
+
+    def test_wrong_sender_and_unapproved_recipient_blocked(self):
+        c = self.config()
+        with self.assertRaises(ValueError):
+            pilot.prepare_email(c, "other@example.org", "2026-11-18", "Report", "ready")
+        c["email"]["recipients"].append("extra@example.org")
+        with self.assertRaises(ValueError):
+            pilot.prepare_email(c, "sender@example.org", "2026-11-18", "Report", "ready")
+
+
 if __name__ == "__main__":
     unittest.main()

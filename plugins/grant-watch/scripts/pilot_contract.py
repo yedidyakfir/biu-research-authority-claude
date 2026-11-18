@@ -1,6 +1,7 @@
 """Deterministic guards for the Notion-backed Grant Watch pilot (no network I/O)."""
 import argparse
 import hashlib
+import html
 import json
 import re
 from datetime import date, datetime
@@ -54,6 +55,29 @@ def delivery_allowed(config, connected_sender):
         and mail.get("approved_recipients") == recipients
     )
 
+
+
+def prepare_email(config, connected_sender, report_day, digest, delivery_state):
+    """Build connector arguments only; caller must persist intent before sending."""
+    if not delivery_allowed(config, connected_sender):
+        raise ValueError("Sender or recipient approval guard failed")
+    if delivery_state != "ready":
+        raise ValueError("Delivery must be ready; reconcile pending/uncertain/sent first")
+    key = run_key(report_day)
+    if not isinstance(digest, str) or not digest.strip():
+        raise ValueError("A persisted report is required")
+    return {
+        "from_address": connected_sender,
+        "to": ", ".join(config["email"]["approved_recipients"]),
+        "subject": f"BIU Grant Watch | {report_day} | {key}",
+        "payload": {
+            "mime_type": "text/html",
+            "charset": "UTF-8",
+            "body": {"content": "<h2>BIU Grant Watch</h2><p>Run: "
+                     + html.escape(key) + "</p><div style='white-space:pre-wrap'>"
+                     + html.escape(digest) + "</div>"},
+        },
+    }
 
 
 def run_summary(state, started_at, updated_at, due, checked, new_findings, failures=0):
