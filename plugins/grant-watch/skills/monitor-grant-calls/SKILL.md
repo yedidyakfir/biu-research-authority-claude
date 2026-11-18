@@ -19,6 +19,8 @@ For the BIU desktop pilot, first read [the Notion pilot contract](references/not
 
 ## Daily monitoring
 
+If private configuration has `operational_catalog`, follow its compact active/due queues, version and persistent fair cursor under the Notion pilot contract. Do not re-enumerate raw baseline/archive pages nightly. Historical deduplication is a separate background job. Apply explicit per-run source/call/request/time budgets, record deferrals in Notion, and distinguish planned counts from actual successful checks.
+
 1. Run the calendar from stored verified facts each day, even when no sites change. Identify calls that open today, deadlines approaching by the configured reminder intervals, and calls that close today. Distinguish submission stages and timezones.
 2. Discover new records through official APIs/feeds and registered announcement sources. Check registered program pages with conditional HTTP requests when supported. Compare a normalized, relevant-content fingerprint after a successful response. An unchanged response consumes no model tokens; do not re-research it. Use host-specific rate limits and honor access restrictions.
 3. Escalate a new record, relevant change, missing/ambiguous date, redirect to a new call, or source failure to focused research. Read the changed page and linked official call documents; extract dates and status with evidence. Treat a 200 response containing a CAPTCHA or unrelated page as a failure, not a change. When a primary source is unavailable, mark verification pending and route it for human review.
