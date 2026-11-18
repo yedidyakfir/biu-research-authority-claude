@@ -3,7 +3,7 @@ import argparse
 import hashlib
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -53,6 +53,61 @@ def delivery_allowed(config, connected_sender):
         and all(isinstance(x, str) and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", x) for x in recipients)
         and mail.get("approved_recipients") == recipients
     )
+
+
+
+def run_summary(state, started_at, updated_at, due, checked, new_findings, failures=0):
+    """Report observed coverage, never equate an interrupted run with an empty run."""
+    if state not in {"running", "complete", "partial", "failed", "blocked"}:
+        raise ValueError("Unknown run state")
+    times = [datetime.fromisoformat(t) for t in (started_at, updated_at)]
+    if any(t.tzinfo is None or t.utcoffset() is None for t in times) or times[1] < times[0]:
+        raise ValueError("Require ordered, timezone-aware timestamps")
+    if any(type(n) is not int or n < 0 for n in (due, checked, new_findings, failures)):
+        raise ValueError("Counts must be nonnegative integers")
+    if checked + failures > due:
+        raise ValueError("Source counts exceed due coverage")
+    if state == "complete" and (failures or checked != due):
+        raise ValueError("Incomplete coverage cannot be reported as complete")
+    if state != "complete":
+        outcome = f"{state.upper()}: incomplete; findings so far: {new_findings}"
+    elif due == 0:
+        outcome = f"COMPLETE: no sources due; new calendar events: {new_findings}"
+    elif new_findings:
+        outcome = f"COMPLETE: {new_findings} new findings"
+    else:
+        outcome = "COMPLETE: no new findings in checked sources"
+    return (f"{outcome} | sources {checked}/{due}, failed {failures}"
+            f" | started {started_at} | updated {updated_at}")
+
+
+def entry_status(mandatory_preproposal, deadline_passed, prior_stage_satisfied):
+    """Inputs are source-verified facts, not guesses from a future final deadline."""
+    if any(v is not True and v is not False and v is not None
+           for v in (mandatory_preproposal, deadline_passed, prior_stage_satisfied)):
+        raise ValueError("Stage facts must be true, false, or unknown")
+    if mandatory_preproposal is None:
+        return "verify_prerequisites"
+    if not mandatory_preproposal:
+        return "no_mandatory_preproposal"
+    if prior_stage_satisfied is True:
+        return "continuing_applicant_only_check_final_stage"
+    if deadline_passed is True:
+        return "closed_to_new_applicants"
+    if deadline_passed is None:
+        return "verify_prerequisites"
+    return "preproposal_stage_open_check_remaining_conditions"
+
+
+def institution_status(current_eligible, evidence_verified, criteria_changed=False):
+    """Current eligibility requires current evidence, never historical carry-over."""
+    if current_eligible is not True and current_eligible is not False and current_eligible is not None:
+        raise ValueError("Eligibility must be true, false, or unknown")
+    if type(evidence_verified) is not bool or type(criteria_changed) is not bool:
+        raise ValueError("Evidence and change flags must be boolean")
+    if not evidence_verified or current_eligible is None:
+        return "review_changed_criteria" if criteria_changed else "verification_pending"
+    return "eligible_current_evidence" if current_eligible else "ineligible_current_evidence"
 
 
 def main():

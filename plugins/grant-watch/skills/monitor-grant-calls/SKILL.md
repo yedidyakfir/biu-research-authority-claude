@@ -1,6 +1,6 @@
 ---
 name: monitor-grant-calls
-description: Monitor recurring grant programs for new calls, application openings, deadline changes, and closings; prepare evidence-backed daily digests and publication drafts. Use for grant-call monitoring, not eligibility or proposal writing.
+description: Monitor recurring grant programs for new calls, application openings, deadline changes, and closings; prepare evidence-backed daily digests and publication drafts. Use for grant-call monitoring and preliminary applicability flags, not full eligibility assessment or proposal writing.
 ---
 
 # Monitor grant calls
@@ -23,7 +23,8 @@ For the BIU desktop pilot, first read [the Notion pilot contract](references/not
 2. Discover new records through official APIs/feeds and registered announcement sources. Check registered program pages with conditional HTTP requests when supported. Compare a normalized, relevant-content fingerprint after a successful response. An unchanged response consumes no model tokens; do not re-research it. Use host-specific rate limits and honor access restrictions.
 3. Escalate a new record, relevant change, missing/ambiguous date, redirect to a new call, or source failure to focused research. Read the changed page and linked official call documents; extract dates and status with evidence. Treat a 200 response containing a CAPTCHA or unrelated page as a failure, not a change. When a primary source is unavailable, mark verification pending and route it for human review.
 4. Compare verified facts to the stored round. Create idempotent events for a new call, opening, changed deadline, approaching deadline, closing, cancellation, or source failure. Preserve prior values and evidence. Do not create a second notice for the same event and recipient group.
-5. Produce a daily administrator digest from stored state: new or changed calls, openings, upcoming closing milestones, failed checks, and last successful coverage. Prepare a university-wide notice only for a verified, relevant event, with a link and clear submission stage. Route the draft through the Research Authority's publication approval process before broad distribution. Sending or publishing requires an authorized channel and configured recipient policy.
+5. Check mandatory prior submission stages and current institutional eligibility against official evidence before calling a grant actionable. A future full-proposal deadline does not reopen an expired mandatory pre-proposal. Flag changed criteria or unknown prerequisites for review; preserve the call and evidence rather than silently dropping it.
+6. Produce a daily administrator digest from stored state: new or changed calls, openings, upcoming closing milestones, failed checks, and last successful coverage. Prepare a university-wide notice only for a verified, relevant event, with a link and clear submission stage. Route the draft through the Research Authority's publication approval process before broad distribution. Sending or publishing requires an authorized channel and configured recipient policy.
 
 ## Coverage and escalation
 

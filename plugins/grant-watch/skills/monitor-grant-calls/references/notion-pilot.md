@@ -12,7 +12,7 @@ Create these databases beneath the department's approved root (after confirming 
 - Sources: stable source/program key, funder, program, official URL, type, active status, check cadence, due time, last success, HTTP validators, content hash, failure and coverage notes.
 - Rounds: program key, round/cycle, stage, publication/open/close timestamps and original timezone, status, evidence URLs/excerpts, verified time, prior values.
 - Events: deterministic event key, round, type, old/new value, evidence, review status, recipient-group revision, delivery state and receipt.
-- Runs: unique local-date run key, start/end, heartbeat, state (running/complete/partial/blocked), source counts, coverage, failures, digest text, email state/receipt, source-code commit.
+- Runs: unique local-date run key, start/end, heartbeat, state (running/complete/partial/failed/blocked), source counts, coverage, failures, digest text, email state/receipt, source-code commit.
 
 The Configuration page holds a structured JSON code block with workspace_id, root_page_id, sources_database_id, rounds_database_id, events_database_id, runs_database_id, workspace_verified_by_owner, timezone (Asia/Jerusalem), reminder_days ([30,14,7,1]), source pacing settings, approved seed reference, and email configuration. Email fields: enabled=false initially, sender=null, recipients=[], owner_approved=false, approved_recipients=[]. Never put passwords, tokens or authentication cookies in Notion or the public repo. Connect the sender using the desktop's supported email connector later.
 
@@ -33,3 +33,21 @@ Validate the parsed block with scripts/pilot_contract.py (use an ephemeral file 
 Run a real draft-only trial in the intended Notion workspace, then repeat it: unchanged sources must not create duplicate events or trigger duplicate deep research. Exercise changed deadline, source failure, workspace mismatch, missing config, concurrent invocation, recipient change, failed/uncertain send, and recovery of an interrupted run. Test an approved email only after the owner supplies the account and recipients. No marketplace publication or end-user rollout until the pilot is validated and separately authorized.
 
 The helper is deterministic validation, not an autonomous crawler or Notion integration. The scheduled agent executes the source-backed research and connector operations described here. Unit tests do not establish live source coverage, Notion persistence, or email delivery.
+
+
+## Observable outcome and applicability regression contract
+
+Every invocation must produce a timestamped status, including a run with zero new findings. Use scripts/pilot_contract.py's run_summary for the digest header. Supply timezone-aware start and last-update/end times, due-source count, successfully checked count, failure count and new findings. Complete means all sources due for this run were successfully checked; it does not mean complete coverage of all funders. A run with no due sources says so instead of claiming nothing changed.
+
+- Successful new findings: show count and source-backed changes.
+- Successful empty run: explicitly say no new findings in checked sources, with coverage and last successful check.
+- Running, partial, failed or blocked: say incomplete, preserve findings so far, name failed/unattempted sources, last heartbeat, cause and next action. A stale heartbeat is not success.
+- Show email delivery independently: disabled/draft-only, blocked, sent with receipt, or uncertain. Research success is not proof an email was sent. If Notion cannot be accessed, report the blocker in the requesting conversation without writing to an unverified workspace. On a process crash the supervisor must detect missed/stale runs; a helper cannot report after its own process dies.
+
+Before describing a call as actionable, inspect its linked stage requirements and current institutional criteria, not just its future full-proposal deadline. Use entry_status for verified prerequisite facts and institution_status for current evidence:
+- An expired mandatory pre-proposal closes entry to new applicants, even with a future final deadline. Keep it in the record, labeled clearly. Applicants who already passed that stage may still continue, subject to invitation and final-stage conditions.
+- Unknown prerequisite facts remain verification-pending, not open.
+- A changed institutional eligibility rule requires rechecking the current official source. Historical eligibility is not evidence of current eligibility. Keep old/new criteria and evidence timestamps; verified ineligible calls go to the review section, not the eligible opportunities list.
+- These are preliminary applicability checks, not a full eligibility assessment or authority to decide a researcher's individual qualification.
+
+Test these cases with synthetic fixtures. Before rollout also exercise them through the actual agent, intended Notion workspace and configured delivery path. Unit tests protect the deterministic contract only; they do not reproduce or diagnose any previously reported missing-email or empty-dashboard incident.
