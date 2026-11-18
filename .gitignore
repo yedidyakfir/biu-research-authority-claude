@@ -9,3 +9,8 @@
 .claude/settings.local.json
 __pycache__/
 .venv/
+
+# Worktree-local links point at tracked grant sources.
+.agents/skills/monitor-grant-calls/
+.agents/skills/set-up-grant-watch/
+__pycache__/

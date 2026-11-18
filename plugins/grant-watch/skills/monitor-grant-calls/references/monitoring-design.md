@@ -8,7 +8,7 @@ This is a design contract for a future scheduled service. Installing a skill doe
 
 ## Durable state
 
-Use SQLite on a single persistent pilot host, with transactional backups; use a shared transactional database if multiple workers or hosts are later required. Minimum logical records:
+For the current desktop pilot, use the distinct BIU Notion workspace as specified in [the pilot contract](notion-pilot.md). The earlier SQLite design is superseded. Keep one writer and prevent overlap because Notion is not a transactional database. Minimum logical records:
 
 | Record | Essential fields |
 | --- | --- |
@@ -23,7 +23,7 @@ Store only short evidence and source metadata long term. Put temporary downloade
 
 ## Scheduling and cost
 
-- Run once daily at an off-hour minute in `Asia/Jerusalem`, for example 07:17, with a lock so runs do not overlap. Run the date calculator and digest every day. Check for a missed or incomplete run separately, and backfill calendar events after downtime.
+- Run once daily at an off-hour minute in `Asia/Jerusalem`, for example 08:00, with a lock so runs do not overlap. Run the date calculator and digest every day. Check for a missed or incomplete run separately, and backfill calendar events after downtime.
 - Poll official APIs/feeds and registered announcement sources daily. For the current 39 distinct funder URLs, a daily lightweight conditional GET or relevant-section hash check is practical **where the host permits it**. These are network checks, not 39 model research tasks. Stagger requests by host; a blocked source gets a slower approved path and an explicit coverage warning.
 - Research only new records, relevant-content changes, uncertain extractions, and failed source transitions. Recheck active calls and their linked official documents around opening and deadline milestones. Run a monthly independent discovery audit to find moved pages and programs outside the seed list.
 - Conditional GET can return `304` without a body. Where validators are missing, hash the meaningful page section; layout or navigation changes should not trigger date extraction. A hash alone proves only that the extracted section is unchanged, so periodically audit parser coverage.

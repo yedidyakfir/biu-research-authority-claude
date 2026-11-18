@@ -7,6 +7,10 @@ description: Monitor recurring grant programs for new calls, application opening
 
 Maintain a source-backed record of each grant **program** and its dated **call rounds**. The skill describes the monitoring decisions; a separate scheduled runner and durable state store are required for unattended daily operation. Use `set-up-grant-watch` to prepare and verify that automation. Read [the monitoring design](references/monitoring-design.md) before setting up a runner or changing its cadence.
 
+## Desktop development pilot override
+
+For the BIU desktop pilot, first read [the Notion pilot contract](references/notion-pilot.md). Notion in the distinct department workspace is the durable store for configuration, findings, history and recipient policy. This supersedes the older SQLite design. Stop on missing or mismatched workspace access; do not use personal Notion or local business-state files as fallback. Email is draft-only until the sender and exact recipients are supplied and approved. Read the linked repository skill fresh each run; no marketplace release is needed for pilot edits.
+
 ## Seed and verify
 
 - Import the supplied grant workbook into private, durable state outside this public plugin repository. Treat its rows as historical examples and source leads, not current open calls. Normalize funder and program identities; deduplicate shared funder URLs. Preserve the original dates and submission stage (letter of intent, pre-proposal, full proposal, or proof of concept) as historical round data.
