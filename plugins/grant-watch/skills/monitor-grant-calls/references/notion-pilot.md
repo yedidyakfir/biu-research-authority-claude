@@ -71,6 +71,16 @@ Continue calendar reporting from stored dates for suppressed records. Append `re
 
 The helper validates structure and decisions only. It cannot authenticate a web source or prove applicability. The runner must verify the official evidence, persist/read back the review and compose the footer each run. Fixtures and previews use synthetic examples only and are never emailed.
 
+## Daily search audit (Notion only)
+
+Keep the detailed daily audit in the verified BIU Notion workspace only. Do not insert audit rows, full search histories or audit attachments into email. The existing concise findings/coverage digest and restricted-call footer remain separate. No SQLite, giant JSON/HTML attachments or local durable audit file is permitted.
+
+Create/fetch a native `Search Audit` database beneath the approved department root, and add its data-source URL to private configuration as `audit_data_source_url`. Schema: Name (title), Key, Run key, Item key, Kind, Outcome, Source URL, Reason (text), Attempt (number), Actually attempted (checkbox), Started and Finished (date-time). Store one small row per actual source/grant attempt, or per explicit skip/unattempted item. Group/filter views by Run key and day; paginate all reads and writes in batches of at most 50. Use `scripts/audit_contract.py` to build bounded properties and batches. Map Started/Finished to the live connector's date-property syntax after fetching its schema, never guess it.
+
+Allowed outcomes are checked_changed, checked_unchanged, checked_no_findings, error, skipped, not_attempted. Record the source/grant identifier and URL, timestamps, attempt number, concise result/error and a concrete reason for every skip or unattempted item. HTTP errors are attempted but not successful checks. An excluded cycle, rate-limit deferral, time-budget deferral or inaccessible source must not appear as successfully searched. Never manufacture an audit entry from the seed list alone. Planned work and missing outcomes remain distinguishable from performed work.
+
+Persist each completed attempt promptly. Derive an idempotent Key from run, kind, item and attempt; look up that key before creating and reconcile uncertain writes before retrying. A deliberate second actual search increments Attempt; retrying an uncertain Notion write does not. Avoid logging credentials, raw response bodies, applicant personal details or full error dumps. If audit persistence fails, mark the run incomplete and surface the concise failure in coverage, not a false success. At completion reconcile successful/error/skip/unattempted audit counts to the run's coverage totals and record any gap. New schema rows are native Notion records, not sent-mail payloads.
+
 ## Approved email connector path
 
 After owner approval is recorded in the configuration, call Gmail get_profile during each execution and compare its authenticated email with the exact configured sender. Do not merely set a From header to an unverified account. Read back the saved digest before preparing connector arguments with pilot_contract.prepare_email. That helper creates HTML with escaped text, exact approved To recipients, no CC/BCC, and the unique run key in the subject. It does not send mail.
