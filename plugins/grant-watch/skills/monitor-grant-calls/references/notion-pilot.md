@@ -20,6 +20,12 @@ Validate the parsed block with scripts/pilot_contract.py (use an ephemeral file 
 
 ## Daily run, 08:00 Asia/Jerusalem
 
+### Historical baseline intake
+
+When configuration includes `baseline_data_source_url`, fetch its current schema through the same verified department connector before discovery. Reconcile `baseline_batch` and `baseline_expected_rows` against the database count and distinct Key count. Read all pages with pagination; do not treat the first page as the whole baseline. The baseline is a discovery backlog, not a set of current open calls and not a new-findings email event.
+
+Preserve original workbook, message, sheet/row provenance, raw dates and notes. Never advance an old year or convert a month forecast into a verified deadline. Reuse an existing Sources entry when its normalized official program URL matches; distinguish historical rounds and preliminary versus full stages instead of collapsing them. Record unresolved URL/program matches explicitly. Only promote a baseline item after checking current official evidence, stage prerequisites and institutional eligibility. Report backlog coverage separately from sources checked today. Do not mark the entire baseline verified after a bounded check. New imports must reconcile existing deterministic keys before creating rows, and uncertain writes must be read back before retrying.
+
 1. Read the linked repository skill fresh; capture the current Git commit. Acquire a single-host exclusive process/file lock in the private temporary runtime folder; if held, exit rather than overlapping. Release it in a finally block. Do not delete a lock belonging to an active process. Use only one effective schedule.
 2. Verify the Notion workspace and configuration as above. Look up today's run key before creating it; continue a partial run, and do not repeat a completed run's notifications. Notion has no unique constraints or atomic locks, so this pilot has one host/writer. Reconcile uncertain writes by reading the key back before any retry.
 3. Run calendar milestones, then the monitor skill's source discovery and evidence verification. Import only approved seed workbook rows as historical leads. Never invent current dates from historical rounds. Apply bounded per-host pacing and conditional requests. Preserve unsuccessful checks as failures, not 'no changes'.
