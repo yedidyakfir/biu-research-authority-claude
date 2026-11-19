@@ -5,6 +5,7 @@ import html
 import json
 import re
 from datetime import date, datetime
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from uuid import UUID
 
@@ -69,7 +70,17 @@ def prepare_email(config, connected_sender, report_day, digest, delivery_state):
     if delivery_state != "ready":
         raise ValueError("Delivery must be ready; reconcile pending/uncertain/sent first")
     key = run_key(report_day)
-    if not isinstance(digest, str) or not digest.strip():
+    if isinstance(digest, dict):
+        # Resolve beside this file, including linked skills and importlib callers.
+        spec = spec_from_file_location("grant_watch_digest", Path(__file__).with_name("digest_renderer.py"))
+        renderer = module_from_spec(spec)
+        spec.loader.exec_module(renderer)
+        body = renderer.render_digest(digest, report_day)
+    elif isinstance(digest, str) and digest.strip():
+        # Legacy text stays escaped; never interpret it as raw HTML.
+        body = ("<h2>BIU Grant Watch</h2><p>Run: " + html.escape(key)
+                + "</p><div style='white-space:pre-wrap'>" + html.escape(digest) + "</div>")
+    else:
         raise ValueError("A persisted report is required")
     return {
         "from_address": connected_sender,
@@ -78,9 +89,7 @@ def prepare_email(config, connected_sender, report_day, digest, delivery_state):
         "payload": {
             "mime_type": "text/html",
             "charset": "UTF-8",
-            "body": {"content": "<h2>BIU Grant Watch</h2><p>Run: "
-                     + html.escape(key) + "</p><div style='white-space:pre-wrap'>"
-                     + html.escape(digest) + "</div>"},
+            "body": {"content": body},
         },
     }
 
@@ -143,9 +152,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config", type=Path)
     parser.add_argument("--workspace", required=True)
+    parser.add_argument("--report", type=Path, help="Private structured report JSON; prepare only, never send")
+    parser.add_argument("--report-day", help="Reporting day in the configured timezone, YYYY-MM-DD")
+    parser.add_argument("--connected-sender", help="Exact identity freshly read from Gmail get_profile")
+    parser.add_argument("--delivery-state", help="Persisted state; only ready permits preparation")
+    parser.add_argument("--output", type=Path, help="New private connector-arguments JSON file")
     args = parser.parse_args()
-    validate_config(json.loads(args.config.read_text(encoding="utf-8-sig")), args.workspace)
-    print("Configuration checks passed; this does not verify connector access or source coverage.")
+    config = validate_config(json.loads(args.config.read_text(encoding="utf-8-sig")), args.workspace)
+    if args.report:
+        if not all((args.report_day, args.connected_sender, args.delivery_state, args.output)):
+            parser.error("--report requires --report-day, --connected-sender, --delivery-state and --output")
+        payload = prepare_email(config, args.connected_sender, args.report_day,
+                                json.loads(args.report.read_text(encoding="utf-8-sig")), args.delivery_state)
+        encoded = json.dumps(payload, ensure_ascii=False, indent=2)
+        with args.output.open("x", encoding="utf-8") as output:
+            output.write(encoded)
+        print(json.dumps({"prepared_only": True, "sent": False, "output": str(args.output),
+                          "sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest()}))
+    elif any((args.report_day, args.connected_sender, args.delivery_state, args.output)):
+        parser.error("Preparation options require --report")
+    else:
+        print("Configuration checks passed; this does not verify connector access or source coverage.")
 
 
 if __name__ == "__main__":
