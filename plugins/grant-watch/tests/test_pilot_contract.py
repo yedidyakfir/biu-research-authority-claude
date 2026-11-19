@@ -127,6 +127,14 @@ class EmailPreparationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pilot.prepare_email(self.config(), "sender@example.org", "2026-11-18", "Report", state)
 
+    def test_partial_report_with_unknown_biu_terms_can_be_sent_when_ready(self):
+        digest = ("Partial coverage. Current funder dates verified; BIU eligibility "
+                  "and internal deadline unknown. Unverified leads are separate.")
+        result = pilot.prepare_email(self.config(), "sender@example.org", "2026-11-19",
+                                     digest, "ready")
+        self.assertIn(digest, result["payload"]["body"]["content"])
+        self.assertEqual(result["to"], "one@example.org, two@example.org")
+
     def test_wrong_sender_and_unapproved_recipient_blocked(self):
         c = self.config()
         with self.assertRaises(ValueError):

@@ -58,7 +58,12 @@ def delivery_allowed(config, connected_sender):
 
 
 def prepare_email(config, connected_sender, report_day, digest, delivery_state):
-    """Build connector arguments only; caller must persist intent before sending."""
+    """Build connector arguments only; caller must persist intent before sending.
+
+    Partial coverage or unknown BIU terms do not block a truthful, labeled digest.
+    Route source observations with eligibility_contract.digest_section first;
+    sender/recipient approval and pending/uncertain/sent guards remain mandatory.
+    """
     if not delivery_allowed(config, connected_sender):
         raise ValueError("Sender or recipient approval guard failed")
     if delivery_state != "ready":
