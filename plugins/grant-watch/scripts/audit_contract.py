@@ -41,3 +41,56 @@ def audit_batches(rows, page_size=40):
         raise ValueError("Audit batch size must be 1..50")
     for i in range(0, len(rows), page_size):
         yield rows[i:i + page_size]
+
+
+def notion_run_coverage(*, discovery_due, discovery_checked, discovery_failed,
+                        call_checks, call_observations, call_failed,
+                        support_checks, support_succeeded, support_failed,
+                        identity_only_reviews, deferred_queue_records):
+    """Summarize reconciled outcomes by type, for Notion page content only.
+
+    Counts are distinct checked items, not HTTP requests or retry audit rows.
+    The caller must classify discovery/support and call/identity outcomes from
+    evidence: legacy audit Kind alone does not distinguish those categories.
+    No run properties, email payload, cursor or delivery decision is produced.
+    """
+    counts = (discovery_due, discovery_checked, discovery_failed, call_checks,
+              call_observations, call_failed, support_checks, support_succeeded,
+              support_failed, identity_only_reviews, deferred_queue_records)
+    if any(type(n) is not int or n < 0 for n in counts):
+        raise ValueError("Coverage counts must be nonnegative integers")
+
+    def outcomes(total, observed, failed):
+        unresolved = total - observed - failed
+        if unresolved < 0:
+            raise ValueError("Coverage outcomes exceed their category total")
+        return unresolved
+
+    discovery_unresolved = outcomes(discovery_due, discovery_checked, discovery_failed)
+    call_unresolved = outcomes(call_checks, call_observations, call_failed)
+    support_unresolved = outcomes(support_checks, support_succeeded, support_failed)
+    metrics = {
+        "schema": "grant-watch/notion-coverage-v1",
+        "discovery_sources": {"due": discovery_due, "checked": discovery_checked,
+                              "failed": discovery_failed, "unclassified_outcomes": discovery_unresolved},
+        "program_calls": {"attempted": call_checks, "with_observations": call_observations,
+                          "failed": call_failed, "unclassified_outcomes": call_unresolved},
+        "internal_support_sources": {"attempted": support_checks, "succeeded": support_succeeded,
+                                     "failed": support_failed, "unclassified_outcomes": support_unresolved},
+        "identity_only_reviews": identity_only_reviews,
+        "deferred_queue_records": deferred_queue_records,
+    }
+    summary = (
+        f"Discovery sources: checked {discovery_checked}/{discovery_due}; "
+        f"failed {discovery_failed}; unclassified outcomes {discovery_unresolved}.\n"
+        f"Program/call checks: attempted {call_checks}; with observations {call_observations}; "
+        f"failed {call_failed}; unclassified outcomes {call_unresolved}.\n"
+        f"Internal support sources: attempted {support_checks}; succeeded {support_succeeded}; "
+        f"failed {support_failed}; unclassified outcomes {support_unresolved}.\n"
+        f"Identity-only reviews: {identity_only_reviews}. "
+        f"Deferred queue records: {deferred_queue_records}.\n"
+        "Runs Due/Checked/Failed columns count discovery sources only, not overall checks. "
+        "Observations do not establish that a call is open or eligible. "
+        "Deferred queue records are not verified unique calls."
+    )
+    return {"metrics": metrics, "summary": summary}

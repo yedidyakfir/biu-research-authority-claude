@@ -45,4 +45,51 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(set(self.row()).isdisjoint({"to", "subject", "payload", "digest", "attachment"}))
 
 
+class CoverageReportingTests(unittest.TestCase):
+    # November 19 regression counts only; no funder, workspace or recipient data.
+    NOVEMBER_19 = dict(discovery_due=1, discovery_checked=1, discovery_failed=0,
+                       call_checks=28, call_observations=20, call_failed=8,
+                       support_checks=1, support_succeeded=0, support_failed=1,
+                       identity_only_reviews=2, deferred_queue_records=514)
+
+    def coverage(self, **changes):
+        return audit.notion_run_coverage(**dict(self.NOVEMBER_19, **changes))
+
+    def test_november_19_discovery_success_does_not_hide_other_failures(self):
+        report = self.coverage()
+        metrics = report["metrics"]
+        self.assertEqual(metrics["discovery_sources"],
+                         dict(due=1, checked=1, failed=0, unclassified_outcomes=0))
+        self.assertEqual(metrics["program_calls"],
+                         dict(attempted=28, with_observations=20, failed=8, unclassified_outcomes=0))
+        self.assertEqual(metrics["internal_support_sources"],
+                         dict(attempted=1, succeeded=0, failed=1, unclassified_outcomes=0))
+        self.assertEqual(metrics["identity_only_reviews"], 2)
+        self.assertEqual(metrics["deferred_queue_records"], 514)
+        self.assertIn("Program/call checks: attempted 28; with observations 20; failed 8", report["summary"])
+        self.assertIn("Internal support sources: attempted 1; succeeded 0; failed 1", report["summary"])
+        self.assertIn("discovery sources only, not overall checks", report["summary"])
+
+    def test_unresolved_checks_are_not_successes_or_empty_results(self):
+        report = self.coverage(call_observations=18, support_failed=0)
+        self.assertEqual(report["metrics"]["program_calls"]["unclassified_outcomes"], 2)
+        self.assertEqual(report["metrics"]["internal_support_sources"]["unclassified_outcomes"], 1)
+        self.assertNotIn("COMPLETE", report["summary"])
+        self.assertNotIn("no new findings", report["summary"])
+
+    def test_invalid_or_double_counted_outcomes_rejected(self):
+        for change in (dict(discovery_failed=1), dict(call_observations=21),
+                       dict(support_succeeded=1), dict(call_checks=-1),
+                       dict(identity_only_reviews=True), dict(deferred_queue_records=1.5)):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.coverage(**change)
+
+    def test_reporting_does_not_emit_operational_or_email_updates(self):
+        report = self.coverage()
+        self.assertEqual(set(report), {"metrics", "summary"})
+        self.assertTrue(set(report["metrics"]).isdisjoint(
+            {"Due", "Checked", "Failed", "Digest", "State", "Email state",
+             "queue_cursor", "to", "subject", "payload", "attachment"}))
+
+
 if __name__ == "__main__": unittest.main()
