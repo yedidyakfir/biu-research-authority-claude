@@ -37,6 +37,27 @@ class PilotContractTests(unittest.TestCase):
         self.assertEqual(pilot.event_key(*parts), pilot.event_key(*parts))
         self.assertNotEqual(pilot.event_key(*parts), pilot.event_key(*parts[:-1], "2027-03-01"))
 
+    def test_native_cadence_requires_ready_saved_views(self):
+        config = self.config()
+        cadence = dict(mode="native_index_v1", state="ready",
+                       settings_data_source_url="collection://settings",
+                       index_data_source_url="collection://index",
+                       stage_view_urls={stage: "view://" + stage for stage in (
+                           "no_next_dates", "announced_unpublished", "published_future", "open")})
+        for key in ("settings_view_url", "index_view_url", "boundary_view_url", "overdue_view_url",
+                    "index_key_lookup_view_url", "round_key_lookup_view_url"):
+            cadence[key] = "view://" + key
+        config["monitoring_cadence"] = cadence
+        self.assertEqual(pilot.validate_config(config, config["workspace_id"]), config)
+        for key in ("state", "boundary_view_url", "index_key_lookup_view_url"):
+            original = cadence.pop(key)
+            with self.assertRaises(ValueError):
+                pilot.validate_config(config, config["workspace_id"])
+            cadence[key] = original
+        cadence["stage_view_urls"]["open"] = "https://unverified.example"
+        with self.assertRaises(ValueError):
+            pilot.validate_config(config, config["workspace_id"])
+
     def test_no_email_by_default(self):
         self.assertFalse(pilot.delivery_allowed(self.config(), "sender@example.org"))
 

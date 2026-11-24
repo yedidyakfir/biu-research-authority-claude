@@ -25,6 +25,20 @@ def validate_config(config, actual_workspace):
         raise ValueError("Department workspace requires owner confirmation")
     if config.get("timezone") != "Asia/Jerusalem":
         raise ValueError("Pilot timezone must be Asia/Jerusalem")
+    cadence = config.get("monitoring_cadence", {})
+    if cadence.get("mode") == "native_index_v1":
+        if cadence.get("state") != "ready":
+            raise ValueError("Monitoring index migration is not ready")
+        for key in ("settings_data_source_url", "index_data_source_url"):
+            if not cadence.get(key, "").startswith("collection://"):
+                raise ValueError("Missing native cadence data source")
+        if set(cadence.get("stage_view_urls", {})) != {"no_next_dates", "announced_unpublished", "published_future", "open"}:
+            raise ValueError("Require all four cadence views")
+        view_urls = list(cadence["stage_view_urls"].values()) + [cadence.get(key, "") for key in (
+            "settings_view_url", "index_view_url", "boundary_view_url", "overdue_view_url",
+            "index_key_lookup_view_url", "round_key_lookup_view_url")]
+        if any(not isinstance(url, str) or not url.startswith("view://") for url in view_urls):
+            raise ValueError("Require configured native cadence saved views")
     for key in ("sources_database_id", "rounds_database_id", "events_database_id", "runs_database_id"):
         if normalize(config[key]) == normalize(config["root_page_id"]):
             raise ValueError("A database cannot be the root page")

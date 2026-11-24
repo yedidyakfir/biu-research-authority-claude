@@ -19,6 +19,8 @@ For the BIU desktop pilot, first read [the Notion pilot contract](references/not
 
 ## Daily monitoring
 
+If Configuration has `monitoring_cadence.mode = native_index_v1`, follow [cadence and independent rounds](references/cadence-and-rounds.md) for the four editable defaults, bounded native due-index selection, stage boundaries, sourced date/URL history and capacity reporting. This replaces legacy candidate-prefix selection, while retaining the verifier, daily delivery schedule, caps and email controls.
+
 If private configuration has `operational_catalog`, follow its compact active/due queues, version and persistent fair cursor under the Notion pilot contract. Do not re-enumerate raw baseline/archive pages nightly. Historical deduplication is a separate background job. Apply explicit per-run source/call/request/time budgets, record deferrals in Notion, and distinguish planned counts from actual successful checks.
 
 1. Run the calendar from stored verified facts each day, even when no sites change. Identify calls that open today, deadlines approaching by the configured reminder intervals, and calls that close today. Distinguish submission stages and timezones.

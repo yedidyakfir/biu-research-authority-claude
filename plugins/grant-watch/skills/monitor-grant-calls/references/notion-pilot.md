@@ -26,6 +26,8 @@ Validate the parsed block with scripts/pilot_contract.py (use an ephemeral file 
 
 ### Compact program/cycle catalog and bounded run plan
 
+**Native cadence-index override:** if `monitoring_cadence.mode` is `native_index_v1`, use [cadence-and-rounds.md](cadence-and-rounds.md) and the configured native index/settings views. Keep the legacy operational catalog and queue cursor unchanged as provenance/rollback; use the separate index continuation/fairness state. Do not recheck the legacy retry list or candidate prefix in addition to the index. All existing verification, audit, budget and delivery controls still apply.
+
 Background reconciliation maintains program identities separately from call cycles. Multiple observations of one program/cycle are linked as provenance, not scheduled as separate calls. Keep conflicting/ambiguous matches in a separate review queue; never merge solely by similar title/funder name. Historical and forecast observations remain unverified. Retain raw observations, but do not treat applicant personal records as grants.
 
 Private configuration `operational_catalog` contains `catalog_data_source_url`, `queue_data_source_url`, `version`, `state` (must be `ready`), `raw_history_daily_scan` (must be false), `budgets`, and `queue_cursor`. Native catalog/queue batch properties are Name, Key, Kind, Rows, State, Version; bounded page content holds JSON records. Fetch live schemas, filter the configured ready version, and read only due/active compact queue batches. Do not assume these batch properties are per-call fields. Unknown identities/cycles go to ambiguity review, not invented current-cycle IDs. Check version/count integrity before execution.
