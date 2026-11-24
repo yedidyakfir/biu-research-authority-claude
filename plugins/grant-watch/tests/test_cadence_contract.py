@@ -171,5 +171,46 @@ class CadenceTests(unittest.TestCase):
             self.assertEqual(plan["target"]["last_success"],row["last_success"])
             self.assertEqual(plan["index_properties"]["date:Last attempt:start"],"2026-11-24T06:00:00Z")
 
+    def test_actual_cli_two_rounds_weekend_boundaries_outrank_backlog(self):
+        rounds = [self.row("same-program/round-" + key, published_verified=True,
+            last_success="2026-11-25T06:00:00Z", open_verified=False,
+            timeline={"opening": self.fact("2026-11-27T10:00:00+02:00"),
+                      "deadline": self.fact(deadline)}) for key, deadline in (
+                ("A", "2026-11-28T15:00:00+02:00"), ("B", "2026-12-05T15:00:00+02:00"))]
+        backlog = [self.row("backlog/" + str(i)) for i in range(40)]
+        with tempfile.TemporaryDirectory() as folder:
+            for label, now in (("thursday", "2026-11-26T06:00:00Z"), ("sunday", "2026-11-29T06:00:00Z")):
+                if label == "sunday":
+                    for row in rounds:
+                        row["last_success"] = "2026-11-26T06:00:00Z"
+                source, output = Path(folder)/(label+".json"), Path(folder)/(label+"-plan.json")
+                original = json.dumps(dict(now=now, settings=c.defaults(), rows=backlog+rounds,
+                                           limits=dict(call_limit=2, scan_limit=50, remaining_work=True)))
+                source.write_text(original, encoding="utf-8")
+                result = subprocess.run([sys.executable, str(SCRIPT), str(source), "--output", str(output)],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                plan = json.loads(output.read_text(encoding="utf-8"))
+                self.assertTrue(plan["no_send"])
+                self.assertEqual(plan["planned_successes"], 0)
+                self.assertEqual(plan["scanned_index_rows"], 42)
+                self.assertEqual(plan["deferred_in_scanned_rows"], 40)
+                self.assertEqual(plan["boundary_deferred_in_slice"], 0)
+                self.assertEqual({r["key"] for r in plan["selected"]}, {r["key"] for r in rounds})
+                self.assertEqual(source.read_text(encoding="utf-8"), original)
+                states = {r["key"][-1]: r["schedule"] for r in plan["selected"]}
+                if label == "thursday":
+                    self.assertEqual({s["stage"] for s in states.values()}, {"published_future"})
+                else:
+                    self.assertEqual(states["A"]["stage"], "no_next_dates")
+                    self.assertEqual(states["B"]["calendar_status"], "opening_or_status_requires_verification")
+
+    def test_overdue_discovery_does_not_hide_a_due_boundary(self):
+        row = self.row("urgent", published_verified=True,
+                       timeline={"opening": self.fact("2026-11-25T08:00:00+02:00")})
+        plan = c.plan_index([self.row("old"), row], c.stamp("2026-11-25T06:00:00Z"), c.defaults(), call_limit=1)
+        self.assertEqual(plan["selected"][0]["key"], "urgent")
+        self.assertTrue(plan["selected"][0]["schedule"]["boundary_due"])
+
 
 if __name__ == "__main__": unittest.main()

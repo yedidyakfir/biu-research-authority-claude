@@ -155,6 +155,8 @@ def due_state(target, now, settings):
     cached_boundary = stamp(target["boundary_review"]) if target.get("boundary_review") else None
     if cached_boundary and (last is None or last < cached_boundary) and cached_boundary <= due:
         due, reason = cached_boundary, "milestone_boundary"
+    boundary_due = bool((pending_boundaries and min(pending_boundaries) <= now) or
+                        (cached_boundary and (last is None or last < cached_boundary) and cached_boundary <= now))
     # A failure may delay the next attempt, never advance last_success or erase overdue debt.
     overdue_since = due
     if target.get("retry_not_before"):
@@ -163,6 +165,7 @@ def due_state(target, now, settings):
             "due": due <= now, "overdue_since": iso(overdue_since),
             "overdue_hours": max(0, (now - overdue_since).total_seconds() / 3600),
             "reason": reason, "boundaries": boundaries,
+            "boundary_due": boundary_due,
             "next_boundary_review": iso(min(pending_boundaries)) if pending_boundaries else None}
 
 
@@ -359,8 +362,10 @@ def plan_index(rows, now, settings, *, call_limit=30, source_limit=20, scan_limi
     # retry_not_before prevents immediate reselection and permits other due work.
     due.sort(key=lambda r: (r["schedule"]["next_due"], r.get("queue_rank", 0),
                             r["key"] <= cursor, r["key"]))
-    urgent = [r for r in due if r["schedule"]["reason"].endswith("_boundary")]
-    reserved = urgent[:max(1, call_limit // 3)]
+    # Every due boundary has priority while it fits the unchanged cap. A fractional
+    # reservation can leave a known opening stale behind ordinary discovery work.
+    urgent = [r for r in due if r["schedule"]["boundary_due"]]
+    reserved = urgent[:call_limit]
     reserved_keys = {r["key"] for r in reserved}
     ordered = reserved + [r for r in due if r["key"] not in reserved_keys]
     selected, selected_sources = [], set()
