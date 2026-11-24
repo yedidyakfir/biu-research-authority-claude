@@ -39,6 +39,17 @@ def validate_config(config, actual_workspace):
             "index_key_lookup_view_url", "round_key_lookup_view_url")]
         if any(not isinstance(url, str) or not url.startswith("view://") for url in view_urls):
             raise ValueError("Require configured native cadence saved views")
+    notices = config.get("milestone_notices", {})
+    if notices.get("mode") == "durable_v1":
+        if notices.get("state") != "ready" or set(notices.get("eligible_stages", [])) != {"announcement", "publication", "opening"}:
+            raise ValueError("Milestone notice configuration is not ready or has an unsupported stage")
+        if not notices.get("ledger_data_source_url", "").startswith("collection://"):
+            raise ValueError("Missing native notice ledger")
+        views = notices.get("views", {})
+        if not {"settings", "discovery", "announcement", "publication", "opening", "unresolved", "key_lookup", "round_lookup"} <= set(views):
+            raise ValueError("Missing notice reconciliation or pending views")
+        if any(not isinstance(url, str) or not url.startswith("view://") for url in views.values()):
+            raise ValueError("Milestone notices require native saved views")
     for key in ("sources_database_id", "rounds_database_id", "events_database_id", "runs_database_id"):
         if normalize(config[key]) == normalize(config["root_page_id"]):
             raise ValueError("A database cannot be the root page")

@@ -1,5 +1,7 @@
 # Daily desktop pilot instructions
 
+When Configuration enables `milestone_notices.mode = durable_v1`, follow monitor-grant-calls/references/milestone-notices.md for independent pending-ledger discovery and per-phase approaching notices (announcement, anticipated publication and opening only). Use its guarded prepare/reconcile CLI and confirmed receipt tracking; preserve the existing digest schedule and no extra sends.
+
 When Configuration enables `monitoring_cadence.mode = native_index_v1`, read monitor-grant-calls/references/cadence-and-rounds.md and use its four fresh editable cadence settings and bounded native index selection CLI. This supersedes old daily retry/prefix assumptions without changing the existing digest schedule, recipients, verifier, renderer or run caps. Preserve independent rounds, milestone/URL history, stage-boundary checks and Notion-only overdue/capacity reporting.
 
 For delivery, follow monitor-grant-calls/references/email-rendering.md and pass the saved structured report to scripts/pilot_contract.py (`prepare_email`). Its reusable Hebrew RTL templates render locally with no additional model-formatting call. Do not load reference emails/templates into routine context or recreate HTML. Keep the existing sender, recipient, saved-intent, deduplication and receipt controls.

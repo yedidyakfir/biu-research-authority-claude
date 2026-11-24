@@ -74,6 +74,19 @@ class PilotContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pilot.run_key("tomorrow")
 
+    def test_native_notice_mode_requires_reconciliation_views_and_excludes_deadlines(self):
+        config = self.config()
+        notices = dict(mode="durable_v1", state="ready", eligible_stages=["announcement", "publication", "opening"],
+            ledger_data_source_url="collection://notices", views={k:"view://"+k for k in
+            ("settings", "discovery", "announcement", "publication", "opening", "unresolved", "key_lookup", "round_lookup")})
+        config["milestone_notices"] = notices
+        self.assertEqual(pilot.validate_config(config, config["workspace_id"]), config)
+        notices["eligible_stages"].append("deadline")
+        with self.assertRaises(ValueError): pilot.validate_config(config, config["workspace_id"])
+        notices["eligible_stages"].pop()
+        notices["views"].pop("unresolved")
+        with self.assertRaises(ValueError): pilot.validate_config(config, config["workspace_id"])
+
 
 class ReportingRegressionTests(unittest.TestCase):
     # Synthetic cases only: no mailbox contents or real funder assumptions.
