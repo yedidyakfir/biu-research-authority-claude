@@ -23,6 +23,10 @@ For operational full-coverage readiness or an explicitly activated resumable wor
 use [operational coverage](references/operational-coverage.md). A bounded pilot
 slice cannot establish that all due records were checked. The coordinator copies
 configured limits without increasing them; validate capacity before production cutover.
+When `monitoring_cadence.coverage_mode = full_due_v1`, that operational route
+supersedes the pilot prefix and its legacy numeric caps. Read the current configured
+capacity envelope and complete the full due-key reconciliation; never substitute
+a reduced slice if the envelope is insufficient. Per-host safety and delivery guards remain.
 
 If Configuration enables `milestone_notices.mode = durable_v1`, follow [durable phase notices](references/milestone-notices.md) every run, independently of source selection. It replaces generic deadline/closing notification assumptions: each sourced announcement, anticipated publication and opening has its own discovery and approaching notice, with separate settings and confirmed-receipt tracking. Existing deadline facts and verification remain in the report.
 

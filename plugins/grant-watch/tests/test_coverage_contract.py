@@ -243,5 +243,28 @@ class CoverageTests(unittest.TestCase):
                         dict(checkpoint,parts=checkpoint["parts"][:-1]+[checkpoint["parts"][0]])):
             with self.assertRaises(ValueError):self.cli(dict(data,checkpoint=variant))
 
+    def test_batch_reservation_survives_restart_and_refunds_only_confirmed_unused_attempts(self):
+        state=self.ready(requests=10)
+        state=self.act(state,"lease",lease_id="lease",batch_size=1,at="2026-11-26T06:00:00Z")["state"]
+        event=dict(batch_id="one",keys=["a"],request_allowance=8,at="2026-11-26T06:00:01Z")
+        reserved=self.act(state,"reserve_batch",**event)
+        self.assertEqual(reserved["state"]["used"]["requests"],8)
+        self.assertFalse(self.act(reserved["state"],"reserve_batch",**event)["admission"]["execute"])
+        with self.assertRaises(ValueError):self.act(reserved["state"],"reserve_batch",**dict(event,batch_id="other",request_allowance=3))
+        with self.assertRaises(ValueError):self.act(reserved["state"],"complete",key="a",run_key="grant-watch:2026-11-26",
+            result="checked",read_back=True,audit_url="https://notion.example/a")
+        completion=dict(batch_id="one",actual_requests=3,read_back=True,audit_url="https://notion.example/a",request_log_sha256="fixture")
+        done=self.act(reserved["state"],"finish_batch",**completion)
+        self.assertEqual(done["state"]["used"]["requests"],3)
+        self.assertEqual(self.act(done["state"],"finish_batch",**completion)["state"]["used"]["requests"],3)
+        with self.assertRaises(ValueError):self.act(done["state"],"finish_batch",**dict(completion,actual_requests=0))
+        result=self.act(done["state"],"complete",key="a",run_key="grant-watch:2026-11-26",result="unattempted",
+            reason="host backpressure",read_back=True,audit_url="https://notion.example/a")
+        self.assertFalse(result["coverage"]["all_due_attempted"])
+        self.assertEqual(result["coverage"]["unattempted"],1)
+
+    def test_processing_envelope_cannot_cross_twelve_hour_limit(self):
+        with self.assertRaises(ValueError):self.cli(dict(action="start",context=self.context(runtime_seconds=43201)))
+
 
 if __name__ == "__main__": unittest.main()

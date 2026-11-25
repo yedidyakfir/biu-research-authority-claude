@@ -26,6 +26,14 @@ Validate the parsed block with scripts/pilot_contract.py (use an ephemeral file 
 
 ### Compact program/cycle catalog and bounded run plan
 
+**Operational full-coverage override:** when `monitoring_cadence.coverage_mode`
+is `full_due_v1`, follow [operational-coverage.md](operational-coverage.md).
+The current Notion capacity envelope replaces the historical pilot numeric
+defaults below. Enumerate every operational index record and reconcile each
+due key, using the same weekday08:00wake and one digest. Keep per-host limits,
+verification, audit, recipient, lock and receipt controls. An insufficient
+envelope is an actionable failure, not permission for a reduced substitute.
+
 **Native cadence-index override:** if `monitoring_cadence.mode` is `native_index_v1`, use [cadence-and-rounds.md](cadence-and-rounds.md) and the configured native index/settings views. Keep the legacy operational catalog and queue cursor unchanged as provenance/rollback; use the separate index continuation/fairness state. Do not recheck the legacy retry list or candidate prefix in addition to the index. All existing verification, audit, budget and delivery controls still apply.
 
 Background reconciliation maintains program identities separately from call cycles. Multiple observations of one program/cycle are linked as provenance, not scheduled as separate calls. Keep conflicting/ambiguous matches in a separate review queue; never merge solely by similar title/funder name. Historical and forecast observations remain unverified. Retain raw observations, but do not treat applicant personal records as grants.

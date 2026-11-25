@@ -278,6 +278,20 @@ class NoticeTests(unittest.TestCase):
         native["State"] = "delivered"
         with self.assertRaises(ValueError): n.notices_from_notion([native])
 
+    def test_operational_capacity_keeps_all_three_phases_and_both_kinds(self):
+        rounds, notices = {}, []
+        for i in range(477):
+            row = dict(self.round, key="fixture/round-"+str(i))
+            observed = self.ingest({s:self.fact("2026-11-28") for s in n.STAGES}, row)
+            rounds[row["key"]] = observed["round"]
+            notices.extend(observed["notices"])
+        plan = n.select(notices, rounds, self.settings, self.now, scan_limit=3000,
+                        line_limit=1500, unresolved_checked=True)
+        self.assertEqual(len(plan["lines"]), 1431)
+        self.assertEqual(len(plan["alert_keys"]), 2862)
+        self.assertTrue(all(len(line["kinds"]) == 2 for line in plan["lines"]))
+        self.assertFalse(plan["unresolved_delivery_blocked"])
+
 
 if __name__ == "__main__":
     unittest.main()

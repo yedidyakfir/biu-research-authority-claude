@@ -22,6 +22,14 @@ Use `scripts/notice_contract.py input.json --output output.json`; every operatio
 
 ## Scheduled selection, including missed days
 
+In `monitoring_cadence.coverage_mode = full_due_v1`, pass the current configured
+`milestone_notices.budgets.pending_rows` and `notice_lines` to `select` as
+`scan_limit` and `line_limit`; do not retain the helper's legacy100/30 defaults.
+Exhaust each configured pending/unresolved view within its current allowance,
+deduplicate stable keys across views, and expose any remaining work. The larger
+source pass must not silently truncate otherwise eligible phase notices. Receipt
+reconciliation, stage semantics and the single authorized digest remain unchanged.
+
 Run this calendar/notice path every scheduled invocation, independently of which sources are selected. First reconcile the configured unresolved-delivery view (`intent` or `uncertain`, samples excluded) against Runs and Gmail Sent. Read up to20 rows; if more remain, report unresolved delivery and do not send until reconciled. An unresolved old run remains a blocker even after its milestone expires. A send timeout is not proof of failure.
 
 Read the pending discovery view plus one approaching view for each of the three phases. Start with up to20 rows per view; recycle unused allowance up to100 total notice rows, counting duplicates and reads used to find items. Persist separate notice view continuations and fair traversal; never reset the source cursor. All notice work shares the existing 400 metadata-row /100 connector-read bounds, and source/request/time caps; reserve space before source work. Stop and audit deferred work when any bound is reached. Do not claim every pending notice was examined if pagination remains. Current Round checkpoints for selected pending notices are metadata reads, not new source checks.

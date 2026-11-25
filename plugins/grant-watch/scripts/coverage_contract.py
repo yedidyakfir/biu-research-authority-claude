@@ -61,10 +61,12 @@ def start(context):
             positive(value, name)
     if context["limits"]["request_timeout_seconds"] > 30 or context["limits"]["max_parallel_per_host"] != 1:
         raise ValueError("Preserve 30 second timeout and one request per host")
+    if context["limits"]["runtime_seconds"] > 12 * 60 * 60:
+        raise ValueError("Processing window must stop within 12 hours, before the next scheduled wake")
     return dict(schema="grant-watch/coverage-v1", context=copy.deepcopy(context), context_hash=digest(context),
                 rows={}, row_errors=[], conflicts=[], pages={}, scan_complete=False, next_cursor=None,
                 used=dict(index_rows=0, metadata_rows=0, connector_reads=0, calls=0, requests=0), sources=[],
-                metadata_receipts={}, leases={}, outcomes={}, requests={}, host_last={}, blocked_hosts=[], last_action_at=context["now"])
+                metadata_receipts={}, leases={}, outcomes={}, requests={}, request_reservations={}, host_last={}, blocked_hosts=[], last_action_at=context["now"])
 
 
 def check_time(state, value):
@@ -126,7 +128,7 @@ def add_page(state, event):
 
 def census(state):
     now, settings = cadence.stamp(state["context"]["now"]), state["context"]["settings"]
-    stages = {s: dict(active=0, due=0, checked=0, failed=0, identity_only=0, in_flight=0, deferred=0,
+    stages = {s: dict(active=0, due=0, checked=0, failed=0, identity_only=0, unattempted=0, in_flight=0, deferred=0,
                      not_due=0, overdue=0, boundary_due=0) for s in cadence.STAGES}
     due, held, skipped = [], 0, 0
     leased = {key for keys in state["leases"].values() for key in keys}
@@ -157,14 +159,15 @@ def census(state):
     identity = sum(s["identity_only"] for s in stages.values())
     in_flight = sum(s["in_flight"] for s in stages.values())
     deferred = sum(s["deferred"] for s in stages.values())
+    unattempted = sum(s["unattempted"] for s in stages.values())
     weekly = sum(v["active"] * 7 / settings[s]["interval_days"] for s, v in stages.items())
     return dict(by_stage=stages, observed_due=len(due), total_due=len(due) if known else None,
                 unknown_unscanned=None if not state["scan_complete"] else 0,
                 unclassifiable_records=len(state["row_errors"]) + len(state["conflicts"]),
                 scanned_rows=state["used"]["index_rows"], unique_keys=len(state["rows"]), held=held,
                 confirmed_cycle_skips=skipped, enumeration_complete=state["scan_complete"], census_exact=known,
-                checked=checked, failed=failed, identity_only=identity, in_flight=in_flight, deferred=deferred,
-                all_due_attempted=bool(known and not deferred and not in_flight and not identity),
+                checked=checked, failed=failed, identity_only=identity, unattempted=unattempted, in_flight=in_flight, deferred=deferred,
+                all_due_attempted=bool(known and not deferred and not in_flight and not identity and not unattempted),
                 verified_coverage_complete=bool(known and checked == len(due)),
                 weekly_target_demand=weekly if known else None,
                 weekly_call_slots=state["context"]["limits"]["calls"] * 5,
@@ -210,8 +213,12 @@ def complete(state, event):
         raise ValueError("Outcome without admitted target")
     if event.get("run_key") != state["context"]["run_key"] or event.get("read_back") is not True or not event.get("audit_url"):
         raise ValueError("Require same-run persisted outcome and explicit read-back evidence")
-    if event["result"] not in {"checked", "failed", "identity_only"}:
+    if event["result"] not in {"checked", "failed", "identity_only", "unattempted"}:
         raise ValueError("Unknown observed outcome")
+    if event["result"] == "unattempted" and not event.get("reason"):
+        raise ValueError("Unattempted work needs an explicit reason")
+    if any(key in r["keys"] and r["state"] == "reserved" for r in state.get("request_reservations", {}).values()):
+        raise ValueError("Reconcile the reserved source batch first")
     if any(r["key"] == key and r["state"] == "in_flight" for r in state["requests"].values()):
         raise ValueError("Reconcile in-flight requests before recording a final outcome")
     if key in state["outcomes"] and state["outcomes"][key] != event:
@@ -311,6 +318,55 @@ def restore_checkpoint(checkpoint, context_hash):
     return state
 
 
+def reserve_batch(state, event):
+    """Persist one conservative request allowance before running a source batch.
+
+    Reserved attempts are capacity, not observed requests. Never refund an
+    uncertain batch. This avoids a remote full-state checkpoint per HTTP request.
+    """
+    token = event["batch_id"]
+    reservations = state.setdefault("request_reservations", {})
+    if token in reservations:
+        return dict(execute=False, reason="Reconcile already reserved batch; never execute replay")
+    check_time(state, event["at"])
+    keys = event["keys"]
+    leased = {k for values in state["leases"].values() for k in values}
+    if not keys or len(keys) != len(set(keys)) or set(keys) - leased or set(keys) & state["outcomes"].keys():
+        raise ValueError("Batch requires unresolved admitted targets")
+    if any(set(keys) & set(r["keys"]) and r["state"] == "reserved" for r in reservations.values()):
+        raise ValueError("Targets already have an unresolved batch")
+    amount = positive(event["request_allowance"], "request_allowance")
+    if state["used"]["requests"] + amount > state["context"]["limits"]["requests"]:
+        raise ValueError("Cumulative request reservation exceeds configured budget")
+    state["used"]["requests"] += amount
+    reservations[token] = dict(event, state="reserved", actual_requests=None)
+    return dict(execute=True, batch_id=token, request_allowance=amount)
+
+
+def finish_batch(state, event):
+    record = state["request_reservations"][event["batch_id"]]
+    if record["state"] == "finished":
+        if record["completion"] != event:
+            raise ValueError("Conflicting completed batch")
+        return
+    actual = event["actual_requests"]
+    if type(actual) is not int or not 0 <= actual <= record["request_allowance"]:
+        raise ValueError("Invalid actual request count")
+    if event.get("read_back") is not True or not event.get("audit_url") or not event.get("request_log_sha256"):
+        raise ValueError("Persist and read back exact batch evidence before completion")
+    record.update(state="finished", actual_requests=actual, completion=copy.deepcopy(event))
+    # Once exact completion is durable, unused tokens can be reused once only.
+    state["used"]["requests"] -= record["request_allowance"] - actual
+
+
+def outcomes(state, event):
+    rows = event["outcomes"]
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 50:
+        raise ValueError("Read-back outcome batches must be 1..50 native rows")
+    for row in rows:
+        complete(state, row)
+
+
 def run(data):
     action = data["action"]
     if action == "start":
@@ -322,7 +378,8 @@ def run(data):
             raise ValueError("Run/settings/budget context changed; reconcile before continuing")
         actions = {"page": add_page, "lease": lease, "complete": complete, "request": request,
                    "finish_request": finish_request, "metadata": metadata, "status": lambda s, e: None,
-                   "resume": lambda s, e: None, "checkpoint": lambda s, e: export_checkpoint(s, e.get("part_chars", 9000))}
+                   "resume": lambda s, e: None, "checkpoint": lambda s, e: export_checkpoint(s, e.get("part_chars", 9000)),
+                   "reserve_batch": reserve_batch, "finish_batch": finish_batch, "outcomes": outcomes}
         if action not in actions:
             raise ValueError("Unsupported coverage action")
         admission = actions[action](state, data.get("event", {}))

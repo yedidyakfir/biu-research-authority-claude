@@ -1,5 +1,11 @@
 # Cadence and independent application rounds
 
+If Configuration `monitoring_cadence.coverage_mode` is `full_due_v1`, use
+[operational coverage](operational-coverage.md) for full unfiltered traversal,
+resumable source batches and cumulative configured capacity. The bounded pilot
+selection below is a rollback path only in that mode; do not apply its numeric
+defaults or stage prefixes. Lifecycle/date/eligibility rules below still apply.
+
 When Configuration has `monitoring_cadence.mode = native_index_v1`, use this path instead of the legacy candidate-prefix/retry list. Daily delivery, verification, exclusions, lock, email guards and caps stay under `notion-pilot.md`. The old queue/cursor and archive remain provenance and rollback state; do not advance them from index selection.
 
 ## Four editable defaults

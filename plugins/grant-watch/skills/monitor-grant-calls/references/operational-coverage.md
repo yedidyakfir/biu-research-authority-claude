@@ -3,7 +3,10 @@
 Full due coverage is the objective; a finite pilot slice is not completion. The
 existing source and delivery safety limits still apply. This helper is opt-in and
 has no network, Notion or email side effects. Adding it does not activate a new
-worker, increase production budgets, or establish unattended readiness.
+worker, increase production budgets, or establish unattended readiness. When
+Configuration `monitoring_cadence.coverage_mode = full_due_v1`, this is the active
+scheduled route; its fresh configured capacity replaces legacy pilot numeric
+caps and stage-prefix selection. Do not alter the08:00Sun–Thu wake.
 
 ## Entry point and checkpoints
 
@@ -74,6 +77,69 @@ must be verified before cutover; the CLI alone cannot prove a remote write.
    in-flight/deferred, unknown unscanned, and malformed/conflicting counts.
    `total_due: null` means unknown. `all_due_attempted` can be true with failures;
    `verified_coverage_complete` cannot. Do not describe planning as actual checks.
+
+## Desktop batch execution
+
+The desktop agent is the orchestrator; the executable source transport is
+`scripts/source_batch.py snapshot.json --output-dir PRIVATE_BATCH_DIRECTORY --live`.
+It has no email or Notion APIs and does not verify calls from HTTP status alone.
+Never use `--live` during validation or outside the actual scheduled date-key run.
+The same entry point with `mode: fixture` exercises the complete scheduler without
+network; fixture outputs and example receipts must never enter the live ledger.
+
+1. Lease up to20 due keys, including boundaries first. Resolve their exact current
+   source URLs through the existing verifier; fetch target evidence only for those
+   keys. Missing URL/identity is an explicit unattempted outcome, not a success.
+2. Use coverage `reserve_batch` with `batch_id`, `keys`, `request_allowance`, `at`.
+   For a20-key batch reserve up to120 attempts from the remaining global budget,
+   not a new per-batch budget. Write/read back the resulting checkpoint in native
+   parts (create/read in batches of at most8), publishing its manifest last.
+   Reuse two named checkpoint slots within the same Run: write/read back the
+   inactive slot, then atomically point the manifest to it. Keep the previous
+   committed slot until the new manifest reads back exactly. A partial write
+   cannot replace the active checkpoint; do not create a full new family of
+   checkpoint pages for every request or overwrite the only recoverable copy.
+   The allowance covers redirects/retries/follow-ups. Never replay an already
+   reserved batch; reconcile its local journal and durable checkpoint first.
+3. Transport input includes `mode: live`, same `run_key`, `run_started_at`, current
+   `started_at`, `run_used_requests` **before this reservation**, `limits` copied
+   from the coverage context plus `max_parallel:4`, `targets:[{key,url}]`, and
+   `reservation` containing batch ID, exact keys, allowance, run key, native
+   `notion_url` and `read_back:true`. Carry forward `blocked_hosts` and same-run
+   `cache` metadata from prior batches. The existing network approval/access rules
+   still apply; a socket denial is an environment failure, not a reason to rotate
+   access methods or hammer every remaining source.
+4. The transport groups identical URLs while retaining all round keys. It enforces
+   at most4 independent hosts concurrently, exactly1 in flight per host, at least
+   the configured2 seconds between starts, a child-process hard timeout at30
+   seconds, counted explicit redirects and at most2 retries. A403/429 blocks
+   further requests to that host for the run. Reuse a200 response only from this
+   run with its local body and hash intact; that is evidence reuse, not proof of
+   eligibility/openness. Preserve its original `fetched_at` in source provenance;
+   reuse is not a new HTTP observation. Cache loss requires counted retrieval or explicit failure.
+5. Persist actual request logs and outcomes in bounded native audit pages. After
+   read-back, `finish_batch` takes batch ID, `actual_requests`, request-log SHA256,
+   audit URL and `read_back:true`. Only a confirmed finished batch releases unused
+   reserved capacity, once. Then use the unchanged verifier/`complete_attempt`
+   path for each distinct round. Apply up to50 read-back outcomes with coverage
+   `outcomes:{outcomes:[...]}`; each item uses the existing `complete` shape.
+   A host/rate/runtime refusal with no actual request is `unattempted` plus reason,
+   not a failed attempted check. An HTTP failure is `failed`; a200 alone is neither.
+6. Continue the same date-key run until every due key has an observed outcome or
+   an explicit failure/unattempted reason. Persist progress and renew the existing
+   run heartbeat between batches. The maximum processing envelope is12 hours
+   from the08:00cutoff, ending by20:00and leaving12 hours before the next weekday
+   wake. The wake schedule is unchanged; do not start a second run to reset budgets.
+   Surface overload promptly. Before the single authorized digest, reevaluate
+   stored calendar facts at current time so a deadline crossed during processing
+   is not described as still open. Never regenerate the renderer or email audit rows.
+
+The12-hour envelope is a capacity ceiling, not a promised finish. Measure actual
+source/verifier/persistence throughput per batch. The observed30-target run took
+about34 minutes; scaling that pace is roughly9 hours for459 targets. A mock
+workload can prove guards, traversal and restart behavior but cannot prove future
+funder availability or model verification latency. If progress projects beyond
+the remaining window, report the concrete unchecked keys and bottleneck promptly.
 
 ## Notices and one digest
 
