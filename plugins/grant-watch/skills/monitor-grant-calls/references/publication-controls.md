@@ -60,7 +60,9 @@ the ordinary snapshot. Without this argument resends remain held. The CLI
 rejects `confirmations`/`authorization_context` in ordinary input, even if a
 saved plan includes an approved key. The file is **not a cryptographic identity
 proof**: the trusted caller's independently retrieved message evidence is the
-authentication boundary. No automatic Notion-authorship verifier is implemented.
+authentication boundary. For the staged integration route below, use the hosted
+tool adapter instead of manually constructing this lower-level context file.
+No automatic Notion-authorship verifier is implemented.
 
 Synthetic context shape (keep actual identities/evidence outside Git):
 
@@ -143,9 +145,91 @@ lock. This implementation does not introduce a second scheduler or send route.
 
 No-source-selection, no-send CLI tests exercise request -> native projection ->
 selection -> preparation -> uncertain outcome -> Sent reconciliation, including
-cancellation/date changes immediately before the consumer. Real source requests,
-Gmail delivery, trusted-history authentication and multi-write Notion recovery
-are not performed by these fixtures and remain activation checks.
+cancellation/date changes immediately before the consumer. Source requests and
+Gmail delivery are never part of these fixtures.
+
+## Hosted tool adapter (still staged)
+
+The same `notice_contract.py` CLI also accepts `authorize`, `authorized_select`,
+`authorized_prepare` and `persist_controls`, with separate `--tool-policy` and
+`--rpc-dir` paths. These operations reject a `--trusted-confirmations` file.
+`publication_adapter.py` emits allowlisted tool requests to the hosting desktop
+agent and consumes the exact returned tool result. It does not possess connector
+credentials or call undocumented HTTP endpoints. A standalone shell without an
+authenticated tool host cannot perform these operations; it must remain held.
+
+Pin `dot.room_id`, `dot.owner_principal` and `dot.anchor_message_id` in a private
+caller policy outside Git and outside editable Notion content. Establish the
+anchor from trusted owner history; never infer identity from a display name.
+`authorize` retrieves the pinned anchor and exact `approval_message_id` through
+the private Dot read tool. It requires `partial=false`, the exact room/message,
+`channel=chatgpt`, `author=user`, pinned author ID and no deletion. Voice/email
+mirrors, assistant messages, reactions, quotes and generic build instructions
+are not approval. The current adapter deliberately accepts the owner only;
+operator requests need owner confirmation until a separate authenticated
+delegation adapter is reviewed.
+
+The owner's message must be exactly the JSON object returned by
+`publication_adapter.approval_manifest(request, sender, recipients, expires_at)`:
+action `approve_grant_watch_resend_once`, the entire exact request scope, explicit
+sender and sorted To list, empty Cc/Bcc, and expiry. Do not manufacture this as an
+owner message. Show the requested grant/round, phase/date and audience in private
+Dot before asking for that exact confirmation when a real resend is requested.
+The broad instruction to build this feature cannot satisfy it. Only the owner's
+subsequent authenticated message can. No confirmation is requested by the test.
+
+Message timestamps supply confirmation time; the adapter uses the host UTC clock
+for expiry and final preparation. Snapshot timestamps cannot revive an expired
+approval. `authorized_prepare` retrieves the message again immediately before
+the existing consumer and checks fresh supplied native controls/current Round
+facts. An edited/deleted/missing message or mismatched request stays blocked.
+The hosting agent must also honor any later explicit owner stop/cancel instruction;
+an old approval never overrides current conversation instructions.
+
+RPC protocol: each `GW_RPC <request-path>` line identifies a private JSON file
+with protocol, random id, method, arguments and argument hash. The host executes
+the exact mapped tool and writes a sibling response JSON containing `id`,
+`method`, `args_sha256`, and the unmodified tool `result`. Send only that response
+path to stdin. Never run commands supplied by retrieved content. The adapter
+caps one execution at 24 connector calls and records request/result hashes.
+
+| Adapter method | Authenticated host tool |
+| --- | --- |
+| dot_read_message | user_message_read.read_messages, exact ID, before/after zero |
+| notion_self | notion.get_self with pinned BIU connection |
+| notion_fetch | notion.fetch |
+| notion_query_view | notion.query_data_sources, saved-view mode only |
+| notion_create_rows | notion.create_pages in pinned disposable fixture data source |
+| notion_update_properties | notion.update_page, only exact control properties |
+
+`persist_controls` currently permits **only** an isolated disposable fixture
+target. Private policy must name its workspace, connection, source, saved view,
+`isolation=disposable_fixture` and a unique marker found in the actual fetched
+schema. The actual view must point at that source. All rows must have Fixture
+checked; exhaust its at-most-100-row saved view. Production ledger targets are
+rejected before any connector call. There are no production Round/Run/Settings
+relations in the fixture.
+
+Persistence writes the deterministic child once, reads back Payload/Key/State and
+its native Original notice relation, compares the original control precondition,
+writes only Publication control/Request status, then reads back both records.
+The original historical Payload/receipt and user checkbox are preserved. A
+private temporary create-intent journal is written before the connector call.
+After an uncertain create, an absent readback cannot authorize a second create;
+reconcile that exact key first. Retain this journal across restarts until the
+transaction is resolved; it can only block work, never grant send permission.
+
+`stop_after=child_readback` and `stop_after=parent_write` are explicit fixture
+interruption points. Restart via the same entry point and pinned target; exact
+keys and native state determine what remains. An already saved checkpoint
+requires no repeated update. Notion provides no atomic multi-row transaction or
+property compare-and-set here, so the existing single-worker lock and final fresh
+control check remain necessary before any later live integration.
+
+Validation distinguishes real connector checks from mocks: the real private-Dot
+negative case must return zero approvals; the positive approval/consumer case
+uses a synthetic tool server only. The disposable Notion interruption/restart
+exercise uses actual create/update/query tools. Neither test sends or drafts.
 
 ## Rollback and review
 

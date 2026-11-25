@@ -48,6 +48,8 @@ def is_resend(row):
     import notice_contract as n
     if row.get("sample"):
         return row.get("delivery_type") == "resend"
+    if row.get("stage") not in n.STAGES or row.get("kind") not in n.KINDS:
+        raise ValueError("Only supported non-deadline phase notice kinds may be published")
     canonical = n.digest([row["round_key"], row["stage"], row["date_version"], row["kind"]])
     if row.get("delivery_type", "original") == "original":
         if row["key"] != canonical:

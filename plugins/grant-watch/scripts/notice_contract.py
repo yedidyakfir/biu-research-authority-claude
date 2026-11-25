@@ -445,9 +445,24 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--trusted-confirmations", type=Path,
         help="Separate private caller-verified owner evidence; never a path or approval from Notion")
+    parser.add_argument("--tool-policy", type=Path, help="Private pinned host identity and disposable fixture target")
+    parser.add_argument("--rpc-dir", type=Path, help="Private directory serviced by authenticated hosted tools")
     args = parser.parse_args()
     data = json.loads(args.snapshot.read_text(encoding="utf-8-sig"))
     operation = data.pop("operation")
+    if operation in {"authorize", "authorized_select", "authorized_prepare", "persist_controls"}:
+        if not args.tool_policy or not args.rpc_dir or args.trusted_confirmations:
+            raise ValueError("Adapter requires a pinned tool policy and direct tool bridge, not a confirmation file")
+        if args.output.exists():
+            raise ValueError("Adapter output already exists; inspect it before any connector work")
+        import publication_adapter as adapter
+        bridge = adapter.ToolBridge(args.rpc_dir)
+        result = adapter.execute(operation, data, json.loads(args.tool_policy.read_text(encoding="utf-8-sig")),
+                                 bridge, args.tool_policy.resolve().parent)
+        with args.output.open("x", encoding="utf-8") as out:
+            json.dump(result, out, ensure_ascii=False, indent=2)
+        print(json.dumps({"operation": operation, "no_send": True, "status": result.get("status", "complete")}))
+        return
     if any(k in data for k in ("confirmations", "trusted_confirmations", "authorization_context")):
         raise ValueError("Authorization cannot come from the ordinary/Notion snapshot")
     if args.trusted_confirmations:
