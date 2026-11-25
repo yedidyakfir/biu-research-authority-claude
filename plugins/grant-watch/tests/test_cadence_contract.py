@@ -153,6 +153,23 @@ class CadenceTests(unittest.TestCase):
         self.assertEqual(len(result["selected"]), 20)
         self.assertEqual(result["registered_sources_selected"], 20)
         self.assertEqual(result["deferred_in_scanned_rows"], 5)
+        self.assertEqual(result["coverage"], "bounded_partial")
+
+    def test_actual_cli_source_cap_alone_is_partial_coverage(self):
+        rows = [self.row(str(i), registered_sources=["source/" + str(i)]) for i in range(21)]
+        with tempfile.TemporaryDirectory() as folder:
+            source, output = Path(folder)/"input.json", Path(folder)/"output.json"
+            source.write_text(json.dumps(dict(now="2026-11-26T06:00:00Z", settings=c.defaults(), rows=rows,
+                limits=dict(call_limit=30, source_limit=20, scan_limit=100, remaining_work=False))), encoding="utf-8")
+            result = subprocess.run([sys.executable, str(SCRIPT), str(source), "--output", str(output)],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            plan = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(plan["due_in_scanned_rows"], 21)
+            self.assertEqual(len(plan["selected"]), 20)
+            self.assertEqual(plan["deferred_in_scanned_rows"], 1)
+            self.assertFalse(plan["unscanned_work_remains"])
+            self.assertEqual(plan["coverage"], "bounded_partial")
 
     def test_actual_outcome_cli_projects_failure_without_write_or_send(self):
         with tempfile.TemporaryDirectory() as folder:

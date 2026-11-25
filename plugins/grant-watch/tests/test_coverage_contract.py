@@ -169,6 +169,26 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(second["state"]["sources"],["s1"])
         self.assertEqual(second["coverage"]["deferred"],1)
 
+    def test_twenty_one_due_rounds_twenty_sources_is_incomplete_even_with_exhausted_scan(self):
+        rows=[self.row("round-"+str(i),registered_sources=["source-"+str(i)]) for i in range(21)]
+        state=self.ready(rows,calls=30,sources=20,index_rows=100)
+        result=self.act(state,"lease",lease_id="work",batch_size=30,at="2026-11-26T06:00:01Z")
+        self.assertEqual(len(result["admission"]["keys"]),20)
+        self.assertEqual(result["coverage"]["total_due"],21)
+        self.assertEqual(result["coverage"]["deferred"],1)
+        self.assertTrue(result["coverage"]["enumeration_complete"])
+        self.assertEqual(result["state"]["used"]["requests"],0)
+        self.assertEqual(result["state"]["used"]["connector_reads"],1)
+        state=result["state"]
+        for i,key in enumerate(result["admission"]["keys"]):
+            state=self.act(state,"complete",key=key,run_key=state["context"]["run_key"],
+                result="failed" if i==0 else "checked",audit_url="https://notion.example/"+key,read_back=True)["state"]
+        final=self.act(state,"status")["coverage"]
+        self.assertEqual(final["checked"]+final["failed"]+final["deferred"],21)
+        self.assertEqual((final["checked"],final["failed"],final["deferred"]),(19,1,1))
+        self.assertFalse(final["all_due_attempted"])
+        self.assertFalse(final["verified_coverage_complete"])
+
     def test_malformed_rows_identity_only_and_zero_due_cannot_fabricate_success(self):
         state=self.cli(dict(action="start",context=self.context()))["state"]
         result=self.page(state,[{}])

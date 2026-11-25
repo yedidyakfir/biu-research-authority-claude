@@ -380,7 +380,7 @@ def plan_index(rows, now, settings, *, call_limit=30, source_limit=20, scan_limi
             "due_in_scanned_rows": len(due), "selected": selected,
             "deferred_in_scanned_rows": len(due) - len(selected),
             "unscanned_work_remains": bool(remaining_work or scanned == scan_limit),
-            "coverage": "bounded_partial" if remaining_work or scanned == scan_limit or len(due) > call_limit else "scanned_slice_only",
+            "coverage": "bounded_partial" if remaining_work or scanned == scan_limit or len(due) > len(selected) else "scanned_slice_only",
             "held": held, "confirmed_cycle_skips": skipped, "conflicting_keys": sorted(conflicts),
             "boundary_due_in_slice": len(urgent),
             "boundary_deferred_in_slice": len([r for r in urgent if r not in selected]),
