@@ -30,6 +30,13 @@ a reduced slice if the envelope is insufficient. Per-host safety and delivery gu
 
 If Configuration enables `milestone_notices.mode = durable_v1`, follow [durable phase notices](references/milestone-notices.md) every run, independently of source selection. It replaces generic deadline/closing notification assumptions: each sourced announcement, anticipated publication and opening has its own discovery and approaching notice, with separate settings and confirmed-receipt tracking. Existing deadline facts and verification remain in the report.
 
+The separate [publication controls](references/publication-controls.md) feature is
+staged for review. Do not activate it from the existence of Notion columns or a
+checked request. Only an explicitly activated `publication_controls.mode =
+operator_requests_v1` uses that path; every resend still requires independently
+verified owner/operator confirmation for its exact request. Preserve delivered
+rows and use additive resend rows in the existing notice ledger.
+
 If Configuration has `monitoring_cadence.mode = native_index_v1`, follow [cadence and independent rounds](references/cadence-and-rounds.md) for the four editable defaults, bounded native due-index selection, stage boundaries, sourced date/URL history and capacity reporting. This replaces legacy candidate-prefix selection, while retaining the verifier, daily delivery schedule, caps and email controls.
 
 If private configuration has `operational_catalog`, follow its compact active/due queues, version and persistent fair cursor under the Notion pilot contract. Do not re-enumerate raw baseline/archive pages nightly. Historical deduplication is a separate background job. Apply explicit per-run source/call/request/time budgets, record deferrals in Notion, and distinguish planned counts from actual successful checks.

@@ -15,6 +15,7 @@ from pathlib import Path
 import cadence_contract as cadence
 import eligibility_contract as eligibility
 import pilot_contract as pilot
+import publication_contract as publication
 
 STAGES = ("announcement", "publication", "opening")
 KINDS = ("discovery", "approaching")
@@ -171,7 +172,8 @@ def current_notice(row, rounds):
 
 
 def select(notices, rounds, settings, now, *, scan_limit=100, line_limit=30, remaining_work=False,
-           unresolved_checked=False, unresolved_count=0):
+           unresolved_checked=False, unresolved_count=0, controls=None, confirmations=None,
+           audience_key=None):
     """Read pending notices independently of source selection. Caller checks unresolved view first."""
     validate_settings(settings)
     if any(type(n) is not int or n < 1 for n in (scan_limit, line_limit)):
@@ -188,8 +190,14 @@ def select(notices, rounds, settings, now, *, scan_limit=100, line_limit=30, rem
         if row["state"] in UNRESOLVED:
             blocked = True
             continue
-        if row["state"] != "pending":
+        if row["state"] not in {"pending", "awaiting_confirmation"}:
             continue
+        hold = publication.guard(row, controls, confirmations, audience_key, now)
+        if hold:
+            row["selection_hold"] = hold
+            continue
+        row.pop("selection_hold", None)
+        row["state"] = "pending"
         current, checkpoint, valid = current_notice(row, rounds)
         if current is None:
             row["selection_hold"] = "current_round_unavailable"
@@ -201,7 +209,8 @@ def select(notices, rounds, settings, now, *, scan_limit=100, line_limit=30, rem
             row.update(state="suppressed", reason="confirmed_exclusion")
             continue
         row["fact"] = copy.deepcopy(checkpoint["fact"])
-        due, expiry = timing(row, settings)
+        due, expiry = (publication.timing(row, confirmations, now) if publication.is_resend(row)
+                       else timing(row, settings))
         row.update(due_at=cadence.iso(due), expires_at=cadence.iso(expiry))
         if now >= expiry:
             row.update(state="expired", reason="outside_catch_up_window")
@@ -276,7 +285,7 @@ def body_hash(prepared):
     return hashlib.sha256(prepared["payload"]["body"]["content"].encode("utf-8")).hexdigest()
 
 
-def begin_delivery(notices, rounds, plan, prepared, run_key, now):
+def begin_delivery(notices, rounds, plan, prepared, run_key, now, *, controls=None, confirmations=None):
     """Call only after normal pilot.prepare_email guards; persist returned intent first."""
     if plan.get("unresolved_delivery_blocked") or run_key not in prepared["subject"]:
         raise ValueError("Delivery unresolved or run identity mismatch")
@@ -291,22 +300,38 @@ def begin_delivery(notices, rounds, plan, prepared, run_key, now):
     for row in rows:
         if row["key"] in keys:
             current, _, valid = current_notice(row, rounds)
-            if row["state"] != "pending" or not valid or excluded(current) or row.get("sample"):
+            hold = publication.guard(row, controls, confirmations,
+                publication.audience(prepared["from_address"], [s.strip() for s in prepared["to"].split(",")]), now)
+            if (row["state"] not in {"pending", "awaiting_confirmation"} or not valid or
+                    excluded(current) or row.get("sample") or hold):
                 raise ValueError("Notice changed before delivery; regenerate the digest")
             row.update(state="intent", run_key=run_key)
+            if publication.is_resend(row):
+                row["resend_confirmation"] = confirmations.match(row, now)
     intent = dict(run_key=run_key, state="intent", alert_keys=sorted(keys), created_at=cadence.iso(now),
                   subject=prepared["subject"], sender=prepared["from_address"],
                   recipients=[s.strip() for s in prepared["to"].split(",")], body_sha256=body_hash(prepared))
+    intent["resend_authorizations"] = [confirmations.match(r, now) for r in rows
+        if r["key"] in keys and publication.is_resend(r)]
     return {"notices": rows, "intent": intent, "no_send": True}
 
 
 def prepare(notices, rounds, plan, report, config, actual_workspace, connected_sender,
-            report_day, delivery_state, now):
+            report_day, delivery_state, now, *, controls=None, confirmations=None):
     """Actual scheduled preparation entry: existing guards/renderer, then bound notice intent."""
     pilot.validate_config(config, actual_workspace)
+    included = set(plan["alert_keys"])
+    if (any(publication.is_resend(r) for r in notices if r["key"] in included) and
+            config.get("publication_controls", {}).get("mode") != "operator_requests_v1"):
+        raise ValueError("Publication controls are staged; explicit activation is required")
+    if config.get("publication_controls", {}).get("mode") == "operator_requests_v1":
+        required_controls = {r.get("original_key", r["key"]) for r in notices if r["key"] in included}
+        if required_controls - set(controls or {}):
+            raise ValueError("Fresh publication controls required for every selected notice")
     report = compose(report, plan)
     prepared = pilot.prepare_email(config, connected_sender, report_day, report, delivery_state)
-    result = begin_delivery(notices, rounds, plan, prepared, pilot.run_key(report_day), now)
+    result = begin_delivery(notices, rounds, plan, prepared, pilot.run_key(report_day), now,
+                            controls=controls, confirmations=confirmations)
     result.update(report=report, prepared=prepared)
     return result
 
@@ -353,6 +378,9 @@ def reconcile(notices, intent, outcome, now):
 
 def properties(row, settings_pages, settings, run_url=None):
     due, expiry = timing(row, settings)
+    if publication.is_resend(row):
+        due = cadence.stamp(row["requested_at"])
+        expiry = cadence.stamp(row["expires_at"]) if row.get("expires_at") else None
     result = {"Name": row["name"], "Key": row["key"], "Round key": row["round_key"], "Stage": row["stage"],
               "Date version": row["date_version"], "Date value": row["fact"]["value"], "Kind": row["kind"],
               "State": row["state"], "Reason": row.get("reason", ""), "Source URL": row["fact"]["source_url"],
@@ -360,10 +388,13 @@ def properties(row, settings_pages, settings, run_url=None):
               "Sample": "__YES__" if row.get("sample") else "__NO__", "Run key": row.get("run_key", ""),
               "Receipt ID": row.get("receipt", {}).get("message_id", ""),
               "Payload": encode_record(row)}
+    if publication.is_resend(row):
+        result.update({"Delivery type": "resend", "Original notice": [row["original_url"]]
+                       if row.get("original_url") else []})
     if run_url:
         result["Digest run"] = [run_url]
     for name, value in (("Milestone", row["fact"]["value"]), ("First seen", row["first_seen"]),
-                        ("Due", cadence.iso(due)), ("Expires", cadence.iso(expiry)),
+                        ("Due", cadence.iso(due)), ("Expires", cadence.iso(expiry) if expiry else None),
                         ("Delivered", row.get("receipt", {}).get("sent_at"))):
         result[f"date:{name}:start"] = value
         result[f"date:{name}:is_datetime"] = int(bool(value and "T" in value))
@@ -412,9 +443,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("snapshot", type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--trusted-confirmations", type=Path,
+        help="Separate private caller-verified owner evidence; never a path or approval from Notion")
     args = parser.parse_args()
     data = json.loads(args.snapshot.read_text(encoding="utf-8-sig"))
     operation = data.pop("operation")
+    if any(k in data for k in ("confirmations", "trusted_confirmations", "authorization_context")):
+        raise ValueError("Authorization cannot come from the ordinary/Notion snapshot")
+    if args.trusted_confirmations:
+        if operation not in {"select", "prepare"}:
+            raise ValueError("Trusted confirmations apply only to selection/preparation")
+        data["confirmations"] = publication.Confirmations(json.loads(
+            args.trusted_confirmations.read_text(encoding="utf-8-sig")))
     if "settings_rows" in data:
         data["settings"] = settings_from_notion(data.pop("settings_rows"))
     if "now" in data:
@@ -422,11 +462,20 @@ def main():
     if "native_rows" in data:
         if len(data["native_rows"]) > data.get("scan_limit", 100):
             raise ValueError("Native notice read bound exceeded")
-        data["notices"] = notices_from_notion(data.pop("native_rows"))
+        native = data.pop("native_rows")
+        data["notices"] = notices_from_notion(native)
+        if operation in {"controls", "select", "prepare"}:
+            if "controls" in data:
+                raise ValueError("Use one fresh native source for operator controls")
+            data["controls"] = {r["key"]: publication.controls_from_notion(raw)
+                for raw, r in zip(native, data["notices"]) if not publication.is_resend(r)}
+        if operation == "prepare":
+            data.pop("scan_limit", None)  # The native snapshot bound was checked above.
     if operation == "select" and len(data["notices"]) > data.get("scan_limit", 100):
         raise ValueError("Snapshot already exceeded pending notice read bound")
     functions = {"ingest": ingest, "select": select, "compose": compose,
-                 "prepare": prepare, "reconcile": reconcile, "project": project}
+                 "prepare": prepare, "reconcile": reconcile, "project": project,
+                 "controls": publication.sync}
     if operation not in functions:
         raise ValueError("Unsupported no-send operation")
     result = functions[operation](**data)
