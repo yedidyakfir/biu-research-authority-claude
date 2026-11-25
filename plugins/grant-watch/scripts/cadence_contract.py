@@ -396,6 +396,13 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     data = json.loads(args.snapshot.read_text(encoding="utf-8-sig"))
+    if data.get("operation") == "coverage":
+        from coverage_contract import run
+        result = run(data)
+        with args.output.open("x", encoding="utf-8") as out:
+            json.dump(result, out, ensure_ascii=False, indent=2)
+        print(json.dumps({"no_send": True, "coverage": result["coverage"]}))
+        return
     settings = settings_from_notion(data["settings_rows"]) if "settings_rows" in data else data["settings"]
     if data.get("operation") == "complete_attempt":
         target = complete_attempt(data["target"], stamp(data["now"]), settings, **data["outcome"])

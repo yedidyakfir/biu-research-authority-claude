@@ -19,6 +19,11 @@ For the BIU desktop pilot, first read [the Notion pilot contract](references/not
 
 ## Daily monitoring
 
+For operational full-coverage readiness or an explicitly activated resumable worker,
+use [operational coverage](references/operational-coverage.md). A bounded pilot
+slice cannot establish that all due records were checked. The coordinator copies
+configured limits without increasing them; validate capacity before production cutover.
+
 If Configuration enables `milestone_notices.mode = durable_v1`, follow [durable phase notices](references/milestone-notices.md) every run, independently of source selection. It replaces generic deadline/closing notification assumptions: each sourced announcement, anticipated publication and opening has its own discovery and approaching notice, with separate settings and confirmed-receipt tracking. Existing deadline facts and verification remain in the report.
 
 If Configuration has `monitoring_cadence.mode = native_index_v1`, follow [cadence and independent rounds](references/cadence-and-rounds.md) for the four editable defaults, bounded native due-index selection, stage boundaries, sourced date/URL history and capacity reporting. This replaces legacy candidate-prefix selection, while retaining the verifier, daily delivery schedule, caps and email controls.
