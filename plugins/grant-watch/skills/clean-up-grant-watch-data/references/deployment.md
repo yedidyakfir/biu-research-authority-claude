@@ -11,15 +11,23 @@ publication-control adapter; do not deploy that ancestor incidentally with clean
 2. Keep `Configuration.data_cleanup.enabled=false` while staging. Retention and
    calendar interval are independently editable there. Verify the exact workspace
    and parse/read back the block, retaining all unrelated settings verbatim.
-3. Before enabling writes, implement a supported Notion adapter with pinned
-   workspace/source IDs, paginated bounded all-state reads, immutable backups,
-   per-key marker/write readback and uncertain-write recovery. Exercise it on a
-   **disposable Notion fixture**, including request edits during archive. The
-   checked-in adapter currently permits local synthetic fixture writes only.
+3. Run the implemented `cleanup_notion.py plan` through the authenticated host
+   bridge. See [adapter contract](notion-adapter.md) for commands and policy.
+   The available Notion connector lacks the atomic conditional update needed to exclude
+   an operator request arriving between the last read and write. The adapter
+   refuses production archive; rereading or setting a policy flag cannot enable it.
+   The journal/readback/restart transaction is tested against an atomic mock only.
+   Before enabling writes, obtain supported atomic coordination covering the
+   notice family, configuration and active Runs, or an independently enforced
+   exclusive-writer workflow covering human editors as well as workers. This is
+   an additional access/workflow decision, not permission to change access now.
+   Then validate the actual boundary on a disposable Notion fixture.
 4. Verify the actual grant worker's lock protocol/path and acquire the SAME lock,
    plus check durable active runs before mutations. A clock window alone is not
    an overlap guarantee. Live shared-lock and remote operator races are remaining
-   integration gates; leave all real notices in place until proved.
+   integration gates; leave all real notices in place until proved. The implemented
+   Windows FileShare.None lock excludes other Python/.NET processes on a fixture
+   path; it is NOT yet bound to a verified shared path in the live grant worker.
 5. Add the three sidecar fields and NEW working/archive views after schema backup;
    restore old view displays if Notion auto-adds fields. Read back Key/Round/all/
    unresolved/control view filters to prove archived rows remain discoverable.
@@ -48,7 +56,8 @@ Avoid a 30-day recurring interval. Default mutation window is 21:30–22:00; ski
 outside it or on lock/active-run conflict and record a missed cleanup. Do not
 catch up during 08:00–20:00 or change grant cadence. Parent can retry within a
 safe later window without re-archiving completed keys. Actual write deadlines
-must use a monotonic runtime limit in the future remote adapter.
+   use the adapter/transaction's monotonic runtime limits as well as wall-clock
+   window checks. A blocked run never grants permission to widen the window.
 
 Suggested scheduler prompt: “Use the separately linked clean-up-grant-watch-data
 skill on the verified desktop. Read BIU Configuration.data_cleanup fresh. Follow

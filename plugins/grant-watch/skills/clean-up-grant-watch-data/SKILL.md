@@ -1,6 +1,6 @@
 ---
 name: clean-up-grant-watch-data
-description: Plan and validate reversible Grant Watch data retention when asked to clean up or archive old delivered milestone notices. Read configurable retention and monthly cadence from the existing Notion Configuration. This staged skill provides a no-send dry run and disposable-fixture archive; it cannot perform production cleanup or authorize sending.
+description: Plan and validate reversible Grant Watch data retention when asked to clean up or archive old delivered milestone notices. Read configurable retention and monthly cadence from the existing Notion Configuration. Includes an authenticated Notion planning adapter and disposable-fixture archive. Production writes fail closed without atomic coordination and a verified shared grant lock; never authorizes sending.
 ---
 
 # Clean up Grant Watch data
@@ -35,6 +35,19 @@ planned send, creation and editing are not delivery dates.
    successful empty cleanup. No mail, draft, live source request or deletion tool
    belongs in this workflow.
 
+For fresh connector-backed planning, use [the Notion adapter](references/notion-adapter.md)
+instead of assembling a snapshot manually:
+
+```text
+python scripts/cleanup_notion.py plan --policy private-policy.json --rpc-dir private-rpc --output private-plan.json
+```
+
+The host must service only the exact authenticated read-tool requests. The adapter
+verifies workspace, configuration, schemas/views, exhausted ledger/Run traversal
+and linked sent manifests. It reports non-atomic snapshot limits and production
+coordination blockers. Its `archive` command currently returns blocked with zero
+writes: the supported Notion tool has no conditional-update primitive.
+
 ## Test and stage
 
 The same CLI accepts `fixture-archive` only for an explicitly marked local
@@ -47,8 +60,8 @@ python -m unittest discover -s tests -p test_cleanup_contract.py -v
 python scripts/cleanup_contract.py fixture-archive private-fixture.json --output private-result.json
 ```
 
-Never mark a real row as Fixture to get past this restriction. No production write
-adapter ships with this staged version. Keep records in place until the integration
+Never mark a real row as Fixture to get past this restriction. The production
+adapter has no enabled write route. Keep records in place until the integration
 gates in [deployment](references/deployment.md) are met. Parent owns scheduling.
 Return branch/commit, dry-run counts, tests, untouched live runtime ref, and exact
 remaining integration blockers. Future cleanup rules need their own preservation,
